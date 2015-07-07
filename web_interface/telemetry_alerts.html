@@ -1,0 +1,2677 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Telemetry Alerts App</title>
+
+    <!-- Bootstrap core CSS -->
+    <!--
+    <link href="../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="../../resources/js/bootstrap/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet">
+    <link href="/newIncludes/Default.css" rel="stylesheet" type="text/css" media="screen" />
+    <link rel="../../stylesheet" href="/newIncludes/stylesheet.css" type="text/css" />
+    <link href="../../menus/menu_style.css" type="text/css" rel="stylesheet">
+
+    <script type="application/javascript" src="../../resources/js/jquery/jquery-1.11.1.min.js"></script>
+    <script type="application/javascript" src="../../resources/js/bootstrap/bootstrap-3.3.4/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="../../resources/js/knockout/knockout-3.2.0.js"></script>
+    <script type="application/javascript" src="telemetry_alert_view_model.js"></script>
+    -->
+
+    <link href="../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="../resources/js/bootstrap/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet">
+    <link href="/newIncludes/Default.css" rel="stylesheet" type="text/css" media="screen" />
+    <link rel="../stylesheet" href="/newIncludes/stylesheet.css" type="text/css" />
+    <link href="../menus/menu_style.css" type="text/css" rel="stylesheet">
+    <link href="bootstrap_app_general.css" type="text/css" rel="stylesheet">
+
+    <script type="application/javascript" src="../resources/js/jquery/jquery-1.11.1.min.js"></script>
+    <script type="application/javascript" src="../resources/js/bootstrap/bootstrap-3.3.4/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="../resources/js/knockout/knockout-3.2.0.js"></script>
+    <script type="application/javascript" src="telemetry_alert_view_model.js"></script>
+  </head>
+  <body>
+    <style>
+      .hr-margins{
+        margin-bottom: 5px;
+        margin-top: 5px;
+      }
+      .row.no-gutters {
+        margin-right: 0;
+        margin-left: 0;
+      }
+      .row.no-gutters > [class^="col-"],
+      .row.no-gutters > [class*=" col-"] {
+        padding-right: 0;
+        padding-left: 0;
+      }
+      .app_container .row {
+        margin-left: 0px;
+        margin-right: 0px;
+      }
+      .transmitting_ok {
+        background-color: #FFFFFF;
+      }
+      .transmitting_missed_allowed_count {
+        background-color: #ff3633;
+      }
+      .transmitting_missed {
+        background-color: #fff45c;
+      }
+    </style>
+    <div class="app_container">
+      <div class="app_row">
+        <div class="left_col">
+          <div class="bg_new_left"></div>
+        </div>
+        <div class="middle-column">
+          <div class="">
+            <div class="row header_row">
+              <div class="col-xs-12 header_column">
+                <img src="../revamp/banner_top.jpg">
+              </div>
+            </div>
+            <div class="row app_body_row">
+
+              <div class="row">
+                <div class="col-xs-2">
+                  <button class="btn btn-primary" data-bind="click: save_changes">Save Changes</button>
+                </div>
+              </div>
+              <div class="row text-center">
+                <div class="col-xs-2">
+                  <h4>Station Code</h4>
+                </div>
+                <div class="col-xs-1">
+                  <h4>Test Enabled</h4>
+                </div>
+                <div class="col-xs-2">
+                  <h4>Allowed Miss Count</h4>
+                </div>
+                <div class="col-xs-1">
+                  <h4>Current Miss Count</h4>
+                </div>
+                <div class="col-xs-2">
+                  <h4>Last Update Time</h4>
+                </div>
+                <div class="col-xs-2">
+                  <h4>Current Issue</h4>
+                </div>
+              </div>
+                <!--
+                <pre data-bind="text: JSON.stringify(ko.toJS($data.metadata), null, 2)"></pre>
+                -->
+
+              <div data-bind="foreach: station_data">
+                <div class="row text-center" data-bind="attr: {id: station_code + '_row'}, css: get_status_class()">
+                  <div class="col-xs-12">
+                    <hr class="hr-margins">
+                  </div>
+                  <div class="col-xs-2" data-bind="attr: {id: station_code + '_code_col'}">
+                    <span data-bind="text: $data.station_code"></span>
+                  </div>
+                  <div class="col-xs-1" data-bind="attr: {id: station_code + '_test_enable_col'}">
+                    <input type="checkbox" data-bind="checked: test_enabled">
+                  </div>
+                  <div class="col-xs-2" data-bind="attr: {id: station_code + '_allowed_miss_col'}">
+                    <input type="text" data-bind="value: allowed_hour_count_to_miss">
+                  </div>
+                  <div class="col-xs-1" data-bind="attr: {id: station_code + '_current_miss_col'}">
+                    <span data-bind="text: current_hour_count_missed"></span>
+                  </div>
+                  <div class="col-xs-2" data-bind="attr: {id: station_code + '_last_update_time_col'}">
+                    <span data-bind="text: last_update_time"></span>
+                  </div>
+                  <div class="col-xs-2" data-bind="attr: {id: station_code + '_current_issue_col'}">
+                    <span data-bind="text: status_field_text"></span>
+                  </div>
+                  <!--
+                  <div class="col-xs-2" data-bind="attr: {id: station_code + '_transmit_time_col'}">
+                    <span data-bind="text: transmit_time"></span>
+                    <span>/</span>
+                    <span data-bind="text: export_time"></span>
+                  </div>
+                  -->
+                  <div class="col-xs-12">
+                    <hr class="hr-margins">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="right_col">
+          <div class="bg_new_right"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Start POST Modal -->
+    <div class="modal fade" data-bind="with: popup_view" id="" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" data-bind="text: popup_title"></h4>
+          </div>
+          <div class="modal-body">
+            <span class="popup_body" data-bind="text: popup_message"></span>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="message_popup" class="modal fade" data-bind="with: popup_view" tabindex="-1" role="dialog" aria-labelledby="message_popup_modal_label" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <span data-bind="text: popup_title"></span>
+          </div>
+          <div class="modal-body">
+            <span class="popup_body" data-bind="text: popup_message"></span>
+          </div>
+          <div class="modal-footer">
+            <button id="message_popup_close_btn" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+    <!-- End POST Modal -->
+
+
+    <script>
+        /*
+        test_data =
+            {
+              "acebpmet": {
+                "metadata": {
+                  "active_dates": "Mar 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B01E672",
+                  "is_swmp": "P",
+                  "latitude": "32.559344",
+                  "longitude": "80.454558",
+                  "region": "2",
+                  "reserve_code": "ACE",
+                  "reserve_name": "Ashepoo Combahee Edisto Basin",
+                  "state": "SC",
+                  "station_code": "acebpmet",
+                  "station_name": "Bennett's Point",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:01:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "acebpmet"
+                }
+              },
+              "acefcwq": {
+                "metadata": {
+                  "active_dates": "Oct 2002-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B04B1CE",
+                  "is_swmp": "P",
+                  "latitude": "32.6358",
+                  "longitude": "80.3655",
+                  "region": "2",
+                  "reserve_code": "ACE",
+                  "reserve_name": "Ashepoo Combahee Edisto Basin",
+                  "state": "SC",
+                  "station_code": "acefcwq",
+                  "station_name": "Fishing Creek",
+                  "station_type": 1,
+                  "transmit_channel": 79,
+                  "transmit_time": "00:16:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "acefcwq"
+                }
+              },
+              "acespwq": {
+                "metadata": {
+                  "active_dates": "Mar 1995-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B02F20A",
+                  "is_swmp": "P",
+                  "latitude": "32.5233",
+                  "longitude": "80.3568",
+                  "region": "2",
+                  "reserve_code": "ACE",
+                  "reserve_name": "Ashepoo Combahee Edisto Basin",
+                  "state": "SC",
+                  "station_code": "acespwq",
+                  "station_name": "St. Pierre",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:03:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "acespwq"
+                }
+              },
+              "apaebmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B01C09E",
+                  "is_swmp": "P",
+                  "latitude": "29.7909",
+                  "longitude": "84.8834",
+                  "region": "4",
+                  "reserve_code": "APA",
+                  "reserve_name": "Apalachicola Bay",
+                  "state": "FL",
+                  "station_code": "apaebmet",
+                  "station_name": "East Bay",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:00:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "apaebmet"
+                }
+              },
+              "apaebwq": {
+                "metadata": {
+                  "active_dates": "May 1995-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B02D4E6",
+                  "is_swmp": "P",
+                  "latitude": "29.7858",
+                  "longitude": "84.8752",
+                  "region": "4",
+                  "reserve_code": "APA",
+                  "reserve_name": "Apalachicola Bay",
+                  "state": "FL",
+                  "station_code": "apaebwq",
+                  "station_name": "East Bay Bottom",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:03:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "apaebwq"
+                }
+              },
+              "cbmjbmet": {
+                "metadata": {
+                  "active_dates": "Jul 2003-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0071EA",
+                  "is_swmp": "P",
+                  "latitude": "38.7807667",
+                  "longitude": "76.7082000",
+                  "region": "1",
+                  "reserve_code": "CBM",
+                  "reserve_name": "Chesapeake Bay",
+                  "state": "MD",
+                  "station_code": "cbmjbmet",
+                  "station_name": "Jug Bay",
+                  "station_type": 0,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:40:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "cbmjbmet"
+                }
+              },
+              "cbmocwq": {
+                "metadata": {
+                  "active_dates": "Apr 2003-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B03D61C",
+                  "is_swmp": "P",
+                  "latitude": "39.4507",
+                  "longitude": "76.2746",
+                  "region": "1",
+                  "reserve_code": "CBM",
+                  "reserve_name": "Chesapeake Bay",
+                  "state": "MD",
+                  "station_code": "cbmocwq",
+                  "station_name": "Otter Point Creek",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:05:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "cbmocwq"
+                }
+              },
+              "cbmrrwq": {
+                "metadata": {
+                  "active_dates": "Apr 2003-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00629C",
+                  "is_swmp": "P",
+                  "latitude": "38.7813",
+                  "longitude": "76.7137",
+                  "region": "1",
+                  "reserve_code": "CBM",
+                  "reserve_name": "Chesapeake Bay",
+                  "state": "MD",
+                  "station_code": "cbmrrwq",
+                  "station_name": "Railroad",
+                  "station_type": 1,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:38:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "cbmrrwq"
+                }
+              },
+              "cbvshwq": {
+                "metadata": {
+                  "active_dates": "Jan 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B03B3FA",
+                  "is_swmp": "P",
+                  "latitude": "37.57138",
+                  "longitude": "76.88424",
+                  "region": "1",
+                  "reserve_code": "CBV",
+                  "reserve_name": "Chesapeake Bay",
+                  "state": "VA",
+                  "station_code": "cbvshwq",
+                  "station_name": "Sweethall",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:05:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "cbvshwq"
+                }
+              },
+              "cbvtcmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B009218",
+                  "is_swmp": "P",
+                  "latitude": "37.4141",
+                  "longitude": "76.71237",
+                  "region": "1",
+                  "reserve_code": "CBV",
+                  "reserve_name": "Chesapeake Bay",
+                  "state": "VA",
+                  "station_code": "cbvtcmet",
+                  "station_name": "Taskinas Creek",
+                  "station_type": 0,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:39:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "cbvtcmet"
+                }
+              },
+              "delsjmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00F7FE",
+                  "is_swmp": "P",
+                  "latitude": "39.0889028",
+                  "longitude": "75.4368833",
+                  "region": "1",
+                  "reserve_code": "DEL",
+                  "reserve_name": "Delaware",
+                  "state": "DE",
+                  "station_code": "delsjmet",
+                  "station_name": "Saint Jones River",
+                  "station_type": 0,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:40:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "delsjmet"
+                }
+              },
+              "delslwq": {
+                "metadata": {
+                  "active_dates": "Jul 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00E488",
+                  "is_swmp": "P",
+                  "latitude": "39.08498",
+                  "longitude": "75.46058",
+                  "region": "1",
+                  "reserve_code": "DEL",
+                  "reserve_name": "Delaware",
+                  "state": "DE",
+                  "station_code": "delslwq",
+                  "station_name": "Scotton Landing",
+                  "station_type": 1,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:40:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "delslwq"
+                }
+              },
+              "elkapwq": {
+                "metadata": {
+                  "active_dates": "Jun 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B053520",
+                  "is_swmp": "P",
+                  "latitude": "36.8457",
+                  "longitude": "121.7538",
+                  "region": "6",
+                  "reserve_code": "ELK",
+                  "reserve_name": "Elkhorn Slough",
+                  "state": "CA",
+                  "station_code": "elkapwq",
+                  "station_name": "Azevedo Pond",
+                  "station_type": 1,
+                  "transmit_channel": 0,
+                  "transmit_time": "00:13:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "elkapwq"
+                }
+              },
+              "elkcwmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0155FC",
+                  "is_swmp": "P",
+                  "latitude": "36.818056",
+                  "longitude": "121.739394",
+                  "region": "6",
+                  "reserve_code": "ELK",
+                  "reserve_name": "Elkhorn Slough",
+                  "state": "CA",
+                  "station_code": "elkcwmet",
+                  "station_name": "Caspian Weather Station",
+                  "station_type": 0,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:47:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "elkcwmet"
+                }
+              },
+              "elksmwq": {
+                "metadata": {
+                  "active_dates": "Jun 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B026768",
+                  "is_swmp": "P",
+                  "latitude": "36.8179",
+                  "longitude": "121.7394",
+                  "region": "6",
+                  "reserve_code": "ELK",
+                  "reserve_name": "Elkhorn Slough",
+                  "state": "CA",
+                  "station_code": "elksmwq",
+                  "station_name": "South Marsh",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:35:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:15:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "elksmwq"
+                }
+              },
+              "elkvmwq": {
+                "metadata": {
+                  "active_dates": "Mar 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B04D428",
+                  "is_swmp": "P",
+                  "latitude": "36.8111",
+                  "longitude": "121.7792",
+                  "region": "6",
+                  "reserve_code": "ELK",
+                  "reserve_name": "Elkhorn Slough",
+                  "state": "CA",
+                  "station_code": "elkvmwq",
+                  "station_name": "Vierra Mouth",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "12:13:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "elkvmwq"
+                }
+              },
+              "gndbcwq": {
+                "metadata": {
+                  "active_dates": "Mar 2004-",
+                  "export_time": null,
+                  "hads_id": "HTML7",
+                  "is_swmp": "P",
+                  "latitude": "30.3836",
+                  "longitude": "88.4364",
+                  "region": "4",
+                  "reserve_code": "GND",
+                  "reserve_name": "Grand Bay",
+                  "state": "MS",
+                  "station_code": "gndbcwq",
+                  "station_name": "Bayou Cumbest",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "gndbcwq"
+                }
+              },
+              "gndbhwq": {
+                "metadata": {
+                  "active_dates": "Jan 2004-",
+                  "export_time": null,
+                  "hads_id": "HTML5",
+                  "is_swmp": "P",
+                  "latitude": "30.4178",
+                  "longitude": "88.4054",
+                  "region": "4",
+                  "reserve_code": "GND",
+                  "reserve_name": "Grand Bay",
+                  "state": "MS",
+                  "station_code": "gndbhwq",
+                  "station_name": "Bayou Heron",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "gndbhwq"
+                }
+              },
+              "gndblwq": {
+                "metadata": {
+                  "active_dates": "Mar 2004-",
+                  "export_time": null,
+                  "hads_id": "HTML8",
+                  "is_swmp": "P",
+                  "latitude": "30.3571",
+                  "longitude": "88.4629",
+                  "region": "4",
+                  "reserve_code": "GND",
+                  "reserve_name": "Grand Bay",
+                  "state": "MS",
+                  "station_code": "gndblwq",
+                  "station_name": "Bangs Lake",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "gndblwq"
+                }
+              },
+              "gndcrmet": {
+                "metadata": {
+                  "active_dates": "Aug 2004-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B0190E2",
+                  "is_swmp": "P",
+                  "latitude": "30.3592",
+                  "longitude": "88.4200",
+                  "region": "4",
+                  "reserve_code": "GND",
+                  "reserve_name": "Grand Bay",
+                  "state": "MS",
+                  "station_code": "gndcrmet",
+                  "station_name": "Crooked Bayou",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:00:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "gndcrmet"
+                }
+              },
+              "gndpcwq": {
+                "metadata": {
+                  "active_dates": "Aug 2005-",
+                  "export_time": null,
+                  "hads_id": "HTML6",
+                  "is_swmp": "P",
+                  "latitude": "30.3486",
+                  "longitude": "88.4185",
+                  "region": "4",
+                  "reserve_code": "GND",
+                  "reserve_name": "Grand Bay",
+                  "state": "MS",
+                  "station_code": "gndpcwq",
+                  "station_name": "Point Aux Chenes Bay",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "gndpcwq"
+                }
+              },
+              "grbgbwq": {
+                "metadata": {
+                  "active_dates": "Jul 1995-",
+                  "export_time": null,
+                  "hads_id": "HTML9",
+                  "is_swmp": "P",
+                  "latitude": "43.0722",
+                  "longitude": "70.8694",
+                  "region": "0",
+                  "reserve_code": "GRB",
+                  "reserve_name": "Great Bay",
+                  "state": "NH",
+                  "station_code": "grbgbwq",
+                  "station_name": "Great Bay",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "grbgbwq"
+                }
+              },
+              "grbglmet": {
+                "metadata": {
+                  "active_dates": "Oct 2005-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B023714",
+                  "is_swmp": "P",
+                  "latitude": "43.058768",
+                  "longitude": "70.830383",
+                  "region": "0",
+                  "reserve_code": "GRB",
+                  "reserve_name": "Great Bay",
+                  "state": "NH",
+                  "station_code": "grbglmet",
+                  "station_name": "Greenland",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:02:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "grbglmet"
+                }
+              },
+              "grblrwq": {
+                "metadata": {
+                  "active_dates": "Oct 1998-",
+                  "export_time": null,
+                  "hads_id": "HTML10",
+                  "is_swmp": "P",
+                  "latitude": "43.08",
+                  "longitude": "70.9344",
+                  "region": "0",
+                  "reserve_code": "GRB",
+                  "reserve_name": "Great Bay",
+                  "state": "NH",
+                  "station_code": "grblrwq",
+                  "station_name": "Lamprey River",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "grblrwq"
+                }
+              },
+              "grborwq": {
+                "metadata": {
+                  "active_dates": "Apr 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B03437E",
+                  "is_swmp": "P",
+                  "latitude": "43.134",
+                  "longitude": "70.911",
+                  "region": "0",
+                  "reserve_code": "GRB",
+                  "reserve_name": "Great Bay",
+                  "state": "NH",
+                  "station_code": "grborwq",
+                  "station_name": "Oyster River",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:04:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "grborwq"
+                }
+              },
+              "grbsqwq": {
+                "metadata": {
+                  "active_dates": "Jul 1997-",
+                  "export_time": null,
+                  "hads_id": "HTML11",
+                  "is_swmp": "P",
+                  "latitude": "43.052403",
+                  "longitude": "70.911811",
+                  "region": "0",
+                  "reserve_code": "GRB",
+                  "reserve_name": "Great Bay",
+                  "state": "NH",
+                  "station_code": "grbsqwq",
+                  "station_name": "Squamscott River",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "grbsqwq"
+                }
+              },
+              "gtmpcmet": {
+                "metadata": {
+                  "active_dates": "Sep 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B01B60E",
+                  "is_swmp": "P",
+                  "latitude": "29.657702",
+                  "longitude": "81.232743",
+                  "region": "2",
+                  "reserve_code": "GTM",
+                  "reserve_name": "Guana Tolomato Mantanzas",
+                  "state": "FL",
+                  "station_code": "gtmpcmet",
+                  "station_name": "Pellicer Creek",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:00:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "gtmpcmet"
+                }
+              },
+              "gtmpcwq": {
+                "metadata": {
+                  "active_dates": "Feb 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B02C790",
+                  "is_swmp": "P",
+                  "latitude": "29.667071",
+                  "longitude": "81.257403",
+                  "region": "2",
+                  "reserve_code": "GTM",
+                  "reserve_name": "Guana Tolomato Mantanzas",
+                  "state": "FL",
+                  "station_code": "gtmpcwq",
+                  "station_name": "Pellicer Creek",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:03:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "gtmpcwq"
+                }
+              },
+              "hudfsmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00B4F4",
+                  "is_swmp": "P",
+                  "latitude": "42.0182",
+                  "longitude": "73.917",
+                  "region": "0",
+                  "reserve_code": "HUD",
+                  "reserve_name": "Hudson River",
+                  "state": "NY",
+                  "station_code": "hudfsmet",
+                  "station_name": "Field Station",
+                  "station_type": 0,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:39:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "hudfsmet"
+                }
+              },
+              "hudscwq": {
+                "metadata": {
+                  "active_dates": "Apr 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B03A08C",
+                  "is_swmp": "P",
+                  "latitude": "42.0463",
+                  "longitude": "73.9108",
+                  "region": "0",
+                  "reserve_code": "HUD",
+                  "reserve_name": "Hudson River",
+                  "state": "NY",
+                  "station_code": "hudscwq",
+                  "station_name": "Stony Creek",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:05:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "hudscwq"
+                }
+              },
+              "hudskwq": {
+                "metadata": {
+                  "active_dates": "May 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B010580",
+                  "is_swmp": "P",
+                  "latitude": "42.0171",
+                  "longitude": "73.9148",
+                  "region": "0",
+                  "reserve_code": "HUD",
+                  "reserve_name": "Hudson River",
+                  "state": "NY",
+                  "station_code": "hudskwq",
+                  "station_name": "Saw Kill",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:35:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:15:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "hudskwq"
+                }
+              },
+              "hudtnwq": {
+                "metadata": {
+                  "active_dates": "Jul 1996-Dec 1996; Jul 1999-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0550C6",
+                  "is_swmp": "P",
+                  "latitude": "42.0365",
+                  "longitude": "73.9253",
+                  "region": "0",
+                  "reserve_code": "HUD",
+                  "reserve_name": "Hudson River",
+                  "state": "NY",
+                  "station_code": "hudtnwq",
+                  "station_name": "Tivoli North Bay",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:48:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "hudtnwq"
+                }
+              },
+              "hudtswq": {
+                "metadata": {
+                  "active_dates": "May 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00A782",
+                  "is_swmp": "P",
+                  "latitude": "42.027",
+                  "longitude": "73.9259",
+                  "region": "0",
+                  "reserve_code": "HUD",
+                  "reserve_name": "Hudson River",
+                  "state": "NY",
+                  "station_code": "hudtswq",
+                  "station_name": "Tivoli South Bay",
+                  "station_type": 1,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:39:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "hudtswq"
+                }
+              },
+              "jacb6wq": {
+                "metadata": {
+                  "active_dates": "Aug 1996-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00C264",
+                  "is_swmp": "P",
+                  "latitude": "39.5079",
+                  "longitude": "74.3385",
+                  "region": "1",
+                  "reserve_code": "JAC",
+                  "reserve_name": "Jacques Cousteau",
+                  "state": "NJ",
+                  "station_code": "jacb6wq",
+                  "station_name": "Buoy 126",
+                  "station_type": 1,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:39:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "jacb6wq"
+                }
+              },
+              "jacncmet": {
+                "metadata": {
+                  "active_dates": "Oct 2002-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00D112",
+                  "is_swmp": "P",
+                  "latitude": "39.535",
+                  "longitude": "74.4636",
+                  "region": "1",
+                  "reserve_code": "JAC",
+                  "reserve_name": "Jacques Cousteau",
+                  "state": "NJ",
+                  "station_code": "jacncmet",
+                  "station_name": "Nacote Creek",
+                  "station_type": 0,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:39:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "jacncmet"
+                }
+              },
+              "jacnewq": {
+                "metadata": {
+                  "active_dates": "Aug 1996-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B03E386",
+                  "is_swmp": "P",
+                  "latitude": "39.5479",
+                  "longitude": "74.4608",
+                  "region": "1",
+                  "reserve_code": "JAC",
+                  "reserve_name": "Jacques Cousteau",
+                  "state": "NJ",
+                  "station_code": "jacnewq",
+                  "station_name": "Chestnut Neck",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:06:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "jacnewq"
+                }
+              },
+              "job09wq": {
+                "metadata": {
+                  "active_dates": "Dec 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0424AC",
+                  "is_swmp": "P",
+                  "latitude": "17.943669",
+                  "longitude": "66.238486",
+                  "region": "3",
+                  "reserve_code": "JOB",
+                  "reserve_name": "Jobos Bay",
+                  "state": "PR",
+                  "station_code": "job09wq",
+                  "station_name": "Station 9",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:13:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "job09wq"
+                }
+              },
+              "job20wq": {
+                "metadata": {
+                  "active_dates": "May 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B0297EC",
+                  "is_swmp": "P",
+                  "latitude": "17.930317",
+                  "longitude": "66.211472",
+                  "region": "3",
+                  "reserve_code": "JOB",
+                  "reserve_name": "Jobos Bay",
+                  "state": "PR",
+                  "station_code": "job20wq",
+                  "station_name": "Station 20",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:02:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "job20wq"
+                }
+              },
+              "jobjbmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B018394",
+                  "is_swmp": "P",
+                  "latitude": "17.956483",
+                  "longitude": "66.2229333",
+                  "region": "3",
+                  "reserve_code": "JOB",
+                  "reserve_name": "Jobos Bay",
+                  "state": "PR",
+                  "station_code": "jobjbmet",
+                  "station_name": "Jobos Bay Weather",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:00:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "jobjbmet"
+                }
+              },
+              "kachdwq": {
+                "metadata": {
+                  "active_dates": "Jan 2003-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00077A",
+                  "is_swmp": "P",
+                  "latitude": "59.60201",
+                  "longitude": "151.40878",
+                  "region": "7",
+                  "reserve_code": "KAC",
+                  "reserve_name": "Kachemak Bay",
+                  "state": "AK",
+                  "station_code": "kachdwq",
+                  "station_name": "Homer Dolphin Deep",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:34:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:15:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "kachdwq"
+                }
+              },
+              "kachomet": {
+                "metadata": {
+                  "active_dates": "Jan 2002-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B00140C",
+                  "is_swmp": "P",
+                  "latitude": "59.60093",
+                  "longitude": "151.4095",
+                  "region": "7",
+                  "reserve_code": "KAC",
+                  "reserve_name": "Kachemak Bay",
+                  "state": "AK",
+                  "station_code": "kachomet",
+                  "station_name": "Homer",
+                  "station_type": 0,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:34:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "kachomet"
+                }
+              },
+              "kacsdwq": {
+                "metadata": {
+                  "active_dates": "Jan 2004-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B040240",
+                  "is_swmp": "P",
+                  "latitude": "59.44099",
+                  "longitude": "151.72096",
+                  "region": "7",
+                  "reserve_code": "KAC",
+                  "reserve_name": "Kachemak Bay",
+                  "state": "AK",
+                  "station_code": "kacsdwq",
+                  "station_name": "Seldovia Deep",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:59:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "kacsdwq"
+                }
+              },
+              "lksbawq": {
+                "metadata": {
+                  "active_dates": "Jun 2012 -",
+                  "export_time": null,
+                  "hads_id": "HTML12",
+                  "is_swmp": "P",
+                  "latitude": "46.721772",
+                  "longitude": "92.06352",
+                  "region": "5",
+                  "reserve_code": "LKS",
+                  "reserve_name": "Lake Superior",
+                  "state": "WI",
+                  "station_code": "lksbawq",
+                  "station_name": "Barker's Island",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "lksbawq"
+                }
+              },
+              "lksolwq": {
+                "metadata": {
+                  "active_dates": "Jul 2012 -",
+                  "export_time": null,
+                  "hads_id": "HTML13",
+                  "is_swmp": "P",
+                  "latitude": "46.65685",
+                  "longitude": "92.20166",
+                  "region": "5",
+                  "reserve_code": "LKS",
+                  "reserve_name": "Lake Superior",
+                  "state": "WI",
+                  "station_code": "lksolwq",
+                  "station_name": "Oliver Bridge",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "lksolwq"
+                }
+              },
+              "lkspomet": {
+                "metadata": {
+                  "active_dates": "Aug 2013 -",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B048454",
+                  "is_swmp": "P",
+                  "latitude": "46.672360",
+                  "longitude": "92.135614",
+                  "region": "5",
+                  "reserve_code": "LKS",
+                  "reserve_name": "Lake Superior",
+                  "state": "WI",
+                  "station_code": "lkspomet",
+                  "station_name": "Pokegama Bay",
+                  "station_type": 0,
+                  "transmit_channel": 79,
+                  "transmit_time": "00:10:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "lkspomet"
+                }
+              },
+              "marabwq": {
+                "metadata": {
+                  "active_dates": "Apr 2007-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B038660",
+                  "is_swmp": "P",
+                  "latitude": "27.9798",
+                  "longitude": "97.0287",
+                  "region": "4",
+                  "reserve_code": "MAR",
+                  "reserve_name": "Mission Aransas",
+                  "state": "TX",
+                  "station_code": "marabwq",
+                  "station_name": "Aransas Bay",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:05:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "marabwq"
+                }
+              },
+              "marcemet": {
+                "metadata": {
+                  "active_dates": "Nov 2006",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B039516",
+                  "is_swmp": "P",
+                  "latitude": "28.1323",
+                  "longitude": "97.0344",
+                  "region": "4",
+                  "reserve_code": "MAR",
+                  "reserve_name": "Mission Aransas",
+                  "state": "TX",
+                  "station_code": "marcemet",
+                  "station_name": "Copano East",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:05:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "marcemet"
+                }
+              },
+              "marcewq": {
+                "metadata": {
+                  "active_dates": "Apr 2007-",
+                  "export_time": null,
+                  "hads_id": "HTML1",
+                  "is_swmp": "P",
+                  "latitude": "28.1323",
+                  "longitude": "97.0344",
+                  "region": "4",
+                  "reserve_code": "MAR",
+                  "reserve_name": "Mission Aransas",
+                  "state": "TX",
+                  "station_code": "marcewq",
+                  "station_name": "Copano Bay East",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 19:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "marcewq"
+                }
+              },
+              "marcwwq": {
+                "metadata": {
+                  "active_dates": "Jul 2007-",
+                  "export_time": null,
+                  "hads_id": "HTML4",
+                  "is_swmp": "P",
+                  "latitude": "28.0841",
+                  "longitude": "97.2009",
+                  "region": "4",
+                  "reserve_code": "MAR",
+                  "reserve_name": "Mission Aransas",
+                  "state": "TX",
+                  "station_code": "marcwwq",
+                  "station_name": "Copano Bay West",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 19:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "marcwwq"
+                }
+              },
+              "marmbwq": {
+                "metadata": {
+                  "active_dates": "Jan 2008-",
+                  "export_time": null,
+                  "hads_id": "HTML2",
+                  "is_swmp": "P",
+                  "latitude": "28.1384",
+                  "longitude": "96.8285",
+                  "region": "4",
+                  "reserve_code": "MAR",
+                  "reserve_name": "Mission Aransas",
+                  "state": "TX",
+                  "station_code": "marmbwq",
+                  "station_name": "Mesquite Bay",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 19:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "marmbwq"
+                }
+              },
+              "marscwq": {
+                "metadata": {
+                  "active_dates": "Aug 2007 -",
+                  "export_time": null,
+                  "hads_id": "HTML3",
+                  "is_swmp": "P",
+                  "latitude": "27.8383",
+                  "longitude": "97.0503",
+                  "region": "4",
+                  "reserve_code": "MAR",
+                  "reserve_name": "Mission Aransas",
+                  "state": "TX",
+                  "station_code": "marscwq",
+                  "station_name": "Ship Channel",
+                  "station_type": 1,
+                  "transmit_channel": null,
+                  "transmit_time": null
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 19:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "marscwq"
+                }
+              },
+              "narpcmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B0211F8",
+                  "is_swmp": "P",
+                  "latitude": "41.637139",
+                  "longitude": "71.339386",
+                  "region": "0",
+                  "reserve_code": "NAR",
+                  "reserve_name": "Narragansett Bay",
+                  "state": "RI",
+                  "station_code": "narpcmet",
+                  "station_name": "Potters Cove",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:01:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "narpcmet"
+                }
+              },
+              "nartbwq": {
+                "metadata": {
+                  "active_dates": "Jul 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B0335EE",
+                  "is_swmp": "P",
+                  "latitude": "41.578361",
+                  "longitude": "71.321125",
+                  "region": "0",
+                  "reserve_code": "NAR",
+                  "reserve_name": "Narragansett Bay",
+                  "state": "RI",
+                  "station_code": "nartbwq",
+                  "station_name": "T-Wharf Bottom",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:04:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "nartbwq"
+                }
+              },
+              "niwdcwq": {
+                "metadata": {
+                  "active_dates": "Mar 1998-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B049722",
+                  "is_swmp": "P",
+                  "latitude": "33.3601486",
+                  "longitude": "79.1674572",
+                  "region": "2",
+                  "reserve_code": "NIW",
+                  "reserve_name": "North Inlet-Winyah Bay",
+                  "state": "SC",
+                  "station_code": "niwdcwq",
+                  "station_name": "Debidue Creek",
+                  "station_type": 1,
+                  "transmit_channel": 79,
+                  "transmit_time": "00:10:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "niwdcwq"
+                }
+              },
+              "niwolmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B01F504",
+                  "is_swmp": "P",
+                  "latitude": "33.3493511",
+                  "longitude": "79.1888819",
+                  "region": "2",
+                  "reserve_code": "NIW",
+                  "reserve_name": "North Inlet-Winyah Bay",
+                  "state": "SC",
+                  "station_code": "niwolmet",
+                  "station_name": "Oyster Landing",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:01:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "niwolmet"
+                }
+              },
+              "niwolwq": {
+                "metadata": {
+                  "active_dates": "Jan 1996-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B031302",
+                  "is_swmp": "P",
+                  "latitude": "33.3493511",
+                  "longitude": "79.1888819",
+                  "region": "2",
+                  "reserve_code": "NIW",
+                  "reserve_name": "North Inlet-Winyah Bay",
+                  "state": "SC",
+                  "station_code": "niwolwq",
+                  "station_name": "Oyster Landing",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:03:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "niwolwq"
+                }
+              },
+              "nocrcmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B02028E",
+                  "is_swmp": "P",
+                  "latitude": "34.1555",
+                  "longitude": "77.8509",
+                  "region": "2",
+                  "reserve_code": "NOC",
+                  "reserve_name": "North Carolina",
+                  "state": "NC",
+                  "station_code": "nocrcmet",
+                  "station_name": "Research Creek",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:01:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "nocrcmet"
+                }
+              },
+              "nocrcwq": {
+                "metadata": {
+                  "active_dates": "May 1994-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B032698",
+                  "is_swmp": "P",
+                  "latitude": "34.156",
+                  "longitude": "77.8499",
+                  "region": "2",
+                  "reserve_code": "NOC",
+                  "reserve_name": "North Carolina",
+                  "state": "NC",
+                  "station_code": "nocrcwq",
+                  "station_name": "Research Creek",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:04:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "nocrcwq"
+                }
+              },
+              "noczbwq": {
+                "metadata": {
+                  "active_dates": "Mar 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B04523C",
+                  "is_swmp": "P",
+                  "latitude": "33.9547",
+                  "longitude": "77.935",
+                  "region": "2",
+                  "reserve_code": "NOC",
+                  "reserve_name": "North Carolina",
+                  "state": "NC",
+                  "station_code": "noczbwq",
+                  "station_name": "Zeke's Basin",
+                  "station_type": 1,
+                  "transmit_channel": 143,
+                  "transmit_time": "00:06:45"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "noczbwq"
+                }
+              },
+              "owcolwq": {
+                "metadata": {
+                  "active_dates": "Apr 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B02849A",
+                  "is_swmp": "P",
+                  "latitude": "41.3819",
+                  "longitude": "82.5142",
+                  "region": "5",
+                  "reserve_code": "OWC",
+                  "reserve_name": "Old Woman Creek",
+                  "state": "OH",
+                  "station_code": "owcolwq",
+                  "station_name": "Lower Estuary",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:02:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:15:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "owcolwq"
+                }
+              },
+              "owcowmet": {
+                "metadata": {
+                  "active_dates": "May 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B017310",
+                  "is_swmp": "P",
+                  "latitude": "41.37778",
+                  "longitude": "82.508056",
+                  "region": "5",
+                  "reserve_code": "OWC",
+                  "reserve_name": "Old Woman Creek",
+                  "state": "OH",
+                  "station_code": "owcowmet",
+                  "station_name": "Old Woman Creek",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:00:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "owcowmet"
+                }
+              },
+              "pdbbpwq": {
+                "metadata": {
+                  "active_dates": "Jul 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B004470",
+                  "is_swmp": "P",
+                  "latitude": "48.556322",
+                  "longitude": "122.530894",
+                  "region": "7",
+                  "reserve_code": "PDB",
+                  "reserve_name": "Padilla Bay",
+                  "state": "WA",
+                  "station_code": "pdbbpwq",
+                  "station_name": "Ploeg Channel",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:34:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:15:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "pdbbpwq"
+                }
+              },
+              "pdbbywq": {
+                "metadata": {
+                  "active_dates": "Sep 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B041136",
+                  "is_swmp": "P",
+                  "latitude": "48.496139",
+                  "longitude": "122.502114",
+                  "region": "7",
+                  "reserve_code": "PDB",
+                  "reserve_name": "Padilla Bay",
+                  "state": "WA",
+                  "station_code": "pdbbywq",
+                  "station_name": "Bayview Channel",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:59:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "pdbbywq"
+                }
+              },
+              "pdbpfmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B005706",
+                  "is_swmp": "P",
+                  "latitude": "48.463847",
+                  "longitude": "122.469303",
+                  "region": "7",
+                  "reserve_code": "PDB",
+                  "reserve_name": "Padilla Bay",
+                  "state": "WA",
+                  "station_code": "pdbpfmet",
+                  "station_name": "Padilla Bay Farm",
+                  "station_type": 0,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:35:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "pdbpfmet"
+                }
+              },
+              "rkblhwq": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B02E17C",
+                  "is_swmp": "P",
+                  "latitude": "26.0257",
+                  "longitude": "81.7332",
+                  "region": "4",
+                  "reserve_code": "RKB",
+                  "reserve_name": "Rookery Bay",
+                  "state": "FL",
+                  "station_code": "rkblhwq",
+                  "station_name": "Lower Henderson Creek",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:03:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "rkblhwq"
+                }
+              },
+              "rkbuhmet": {
+                "metadata": {
+                  "active_dates": "Jan 2004-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B01D3E8",
+                  "is_swmp": "P",
+                  "latitude": "26.050067",
+                  "longitude": "81.701717",
+                  "region": "4",
+                  "reserve_code": "RKB",
+                  "reserve_name": "Rookery Bay",
+                  "state": "FL",
+                  "station_code": "rkbuhmet",
+                  "station_name": "Upper Henderson Creek",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:01:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "rkbuhmet"
+                }
+              },
+              "sapldwq": {
+                "metadata": {
+                  "active_dates": "Jan 1999-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B0376E4",
+                  "is_swmp": "P",
+                  "latitude": "31.417942",
+                  "longitude": "81.296047",
+                  "region": "2",
+                  "reserve_code": "SAP",
+                  "reserve_name": "Sapelo Island",
+                  "state": "GA",
+                  "station_code": "sapldwq",
+                  "station_name": "Lower Duplin",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:04:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sapldwq"
+                }
+              },
+              "sapmlmet": {
+                "metadata": {
+                  "active_dates": "Sep 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B036592",
+                  "is_swmp": "P",
+                  "latitude": "31.4178",
+                  "longitude": "81.29535",
+                  "region": "2",
+                  "reserve_code": "SAP",
+                  "reserve_name": "Sapelo Island",
+                  "state": "GA",
+                  "station_code": "sapmlmet",
+                  "station_name": "Marsh Landing",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:04:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sapmlmet"
+                }
+              },
+              "sfbccwq": {
+                "metadata": {
+                  "active_dates": "Mar 2005-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B02741E",
+                  "is_swmp": "P",
+                  "latitude": "38.0012",
+                  "longitude": "122.4604",
+                  "region": "6",
+                  "reserve_code": "SFB",
+                  "reserve_name": "San Francisco Bay",
+                  "state": "CA",
+                  "station_code": "sfbccwq",
+                  "station_name": "China Camp",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:35:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:15:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sfbccwq"
+                }
+              },
+              "sfbfmwq": {
+                "metadata": {
+                  "active_dates": "May 2008-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B04E1B2",
+                  "is_swmp": "P",
+                  "latitude": "38.1949",
+                  "longitude": "122.0328",
+                  "region": "6",
+                  "reserve_code": "SFB",
+                  "reserve_name": "San Francisco Bay",
+                  "state": "CA",
+                  "station_code": "sfbfmwq",
+                  "station_name": "First Mallard",
+                  "station_type": 1,
+                  "transmit_channel": 34,
+                  "transmit_time": "00:39:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sfbfmwq"
+                }
+              },
+              "sfbgcwq": {
+                "metadata": {
+                  "active_dates": "Dec 2005-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0513CC",
+                  "is_swmp": "P",
+                  "latitude": "38.0159",
+                  "longitude": "122.5085",
+                  "region": "6",
+                  "reserve_code": "SFB",
+                  "reserve_name": "San Francisco Bay",
+                  "state": "CA",
+                  "station_code": "sfbgcwq",
+                  "station_name": "Gallinas Creek",
+                  "station_type": 1,
+                  "transmit_channel": 34,
+                  "transmit_time": "00:39:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sfbgcwq"
+                }
+              },
+              "sfbrrmet": {
+                "metadata": {
+                  "active_dates": "Aug 2006-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B016066",
+                  "is_swmp": "P",
+                  "latitude": "38.2004",
+                  "longitude": "122.0265",
+                  "region": "6",
+                  "reserve_code": "SFB",
+                  "reserve_name": "San Francisco Bay",
+                  "state": "CA",
+                  "station_code": "sfbrrmet",
+                  "station_name": "Rush Ranch",
+                  "station_type": 0,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:47:20"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sfbrrmet"
+                }
+              },
+              "sfbsmwq": {
+                "metadata": {
+                  "active_dates": "May 2008-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0500BA",
+                  "is_swmp": "P",
+                  "latitude": "38.1841",
+                  "longitude": "122.0136",
+                  "region": "6",
+                  "reserve_code": "SFB",
+                  "reserve_name": "San Francisco Bay",
+                  "state": "CA",
+                  "station_code": "sfbsmwq",
+                  "station_name": "Second Mallard",
+                  "station_type": 1,
+                  "transmit_channel": 34,
+                  "transmit_time": "00:39:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sfbsmwq"
+                }
+              },
+              "soschwq": {
+                "metadata": {
+                  "active_dates": "Apr 2002-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B002196",
+                  "is_swmp": "P",
+                  "latitude": "43.3377",
+                  "longitude": "124.320533",
+                  "region": "7",
+                  "reserve_code": "SOS",
+                  "reserve_name": "South Slough",
+                  "state": "OR",
+                  "station_code": "soschwq",
+                  "station_name": "Charleston Bridge",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:34:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 18:15:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "soschwq"
+                }
+              },
+              "soscmmet": {
+                "metadata": {
+                  "active_dates": "Aug 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0032E0",
+                  "is_swmp": "P",
+                  "latitude": "43.34505",
+                  "longitude": "124.328733",
+                  "region": "7",
+                  "reserve_code": "SOS",
+                  "reserve_name": "South Slough",
+                  "state": "OR",
+                  "station_code": "soscmmet",
+                  "station_name": "Charleston Met. Station",
+                  "station_type": 0,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:34:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "soscmmet"
+                }
+              },
+              "sosecwq": {
+                "metadata": {
+                  "active_dates": "May 2012 -",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0437DA",
+                  "is_swmp": "P",
+                  "latitude": "43.296501",
+                  "longitude": "124.310729",
+                  "region": "6",
+                  "reserve_code": "SOS",
+                  "reserve_name": "South Slough",
+                  "state": "OR",
+                  "station_code": "sosecwq",
+                  "station_name": "Elliot Creek",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:35:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "sosecwq"
+                }
+              },
+              "sosvawq": {
+                "metadata": {
+                  "active_dates": "Jun 1999-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B03F0F0",
+                  "is_swmp": "P",
+                  "latitude": "43.317217",
+                  "longitude": "124.321633",
+                  "region": "7",
+                  "reserve_code": "SOS",
+                  "reserve_name": "South Slough",
+                  "state": "OR",
+                  "station_code": "sosvawq",
+                  "station_name": "Valino Island",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:59:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "sosvawq"
+                }
+              },
+              "soswiwq": {
+                "metadata": {
+                  "active_dates": "Apr 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B04414A",
+                  "is_swmp": "P",
+                  "latitude": "43.282417",
+                  "longitude": "124.320317",
+                  "region": "7",
+                  "reserve_code": "SOS",
+                  "reserve_name": "South Slough",
+                  "state": "OR",
+                  "station_code": "soswiwq",
+                  "station_name": "Winchester Arm",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:35:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "soswiwq"
+                }
+              },
+              "tjroswq": {
+                "metadata": {
+                  "active_dates": "Jan 1996-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B0252F2",
+                  "is_swmp": "P",
+                  "latitude": "32.56829",
+                  "longitude": "117.13127",
+                  "region": "6",
+                  "reserve_code": "TJR",
+                  "reserve_name": "Tijuana River",
+                  "state": "CA",
+                  "station_code": "tjroswq",
+                  "station_name": "Oneonta Slough",
+                  "station_type": 1,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:49:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:30:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "tjroswq"
+                }
+              },
+              "tjrtlmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B01468A",
+                  "is_swmp": "P",
+                  "latitude": "32.5745",
+                  "longitude": "117.127",
+                  "region": "6",
+                  "reserve_code": "TJR",
+                  "reserve_name": "Tijuana River",
+                  "state": "CA",
+                  "station_code": "tjrtlmet",
+                  "station_name": "Tidal Linkage",
+                  "station_type": 0,
+                  "transmit_channel": 152,
+                  "transmit_time": "00:47:00"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "tjrtlmet"
+                }
+              },
+              "welinwq": {
+                "metadata": {
+                  "active_dates": "May 1995-",
+                  "export_time": "00:42:00",
+                  "hads_id": "3B04A2B8",
+                  "is_swmp": "P",
+                  "latitude": "43.320089",
+                  "longitude": "70.563442",
+                  "region": "0",
+                  "reserve_code": "WEL",
+                  "reserve_name": "Wells",
+                  "state": "ME",
+                  "station_code": "welinwq",
+                  "station_name": "Inlet",
+                  "station_type": 1,
+                  "transmit_channel": 0,
+                  "transmit_time": "00:16:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:07:16",
+                  "last_update_time": "2015-05-29 17:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "welinwq"
+                }
+              },
+              "wellfmet": {
+                "metadata": {
+                  "active_dates": "Jan 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B024184",
+                  "is_swmp": "P",
+                  "latitude": "43.337375",
+                  "longitude": "70.549444",
+                  "region": "0",
+                  "reserve_code": "WEL",
+                  "reserve_name": "Wells",
+                  "state": "ME",
+                  "station_code": "wellfmet",
+                  "station_name": "Laudholm Farm",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:02:10"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 18:00:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "wellfmet"
+                }
+              },
+              "welsmwq": {
+                "metadata": {
+                  "active_dates": "Apr 2004-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B035008",
+                  "is_swmp": "P",
+                  "latitude": "43.344711",
+                  "longitude": "70.549217",
+                  "region": "0",
+                  "reserve_code": "WEL",
+                  "reserve_name": "Wells",
+                  "state": "ME",
+                  "station_code": "welsmwq",
+                  "station_name": "Skinner Mill",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:04:30"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 1,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": null,
+                  "min_recs_per_hour": 4,
+                  "station_code": "welsmwq"
+                }
+              },
+              "wkbfrwq": {
+                "metadata": {
+                  "active_dates": "Oct 1995-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B02B100",
+                  "is_swmp": "P",
+                  "latitude": "30.4162",
+                  "longitude": "87.8228",
+                  "region": "4",
+                  "reserve_code": "WKB",
+                  "reserve_name": "Weeks Bay",
+                  "state": "AL",
+                  "station_code": "wkbfrwq",
+                  "station_name": "Fish River",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:02:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "wkbfrwq"
+                }
+              },
+              "wkbshmet": {
+                "metadata": {
+                  "active_dates": "Jan 2008-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B01A578",
+                  "is_swmp": "P",
+                  "latitude": "30.4212",
+                  "longitude": "87.8285",
+                  "region": "4",
+                  "reserve_code": "WKB",
+                  "reserve_name": "Weeks Bay",
+                  "state": "AL",
+                  "station_code": "wkbshmet",
+                  "station_name": "Safe Harbor Met Station",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:02:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "wkbshmet"
+                }
+              },
+              "wqbchmet": {
+                "metadata": {
+                  "active_dates": "Jan 2002-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B022462",
+                  "is_swmp": "P",
+                  "latitude": "41.5817",
+                  "longitude": "70.5251",
+                  "region": "0",
+                  "reserve_code": "WQB",
+                  "reserve_name": "Waquoit Bay",
+                  "state": "MA",
+                  "station_code": "wqbchmet",
+                  "station_name": "Carriage House",
+                  "station_type": 0,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:01:50"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "wqbchmet"
+                }
+              },
+              "wqbmhwq": {
+                "metadata": {
+                  "active_dates": "Mar 2001-",
+                  "export_time": "00:12:00",
+                  "hads_id": "3B030074",
+                  "is_swmp": "P",
+                  "latitude": "41.5526",
+                  "longitude": "70.5485",
+                  "region": "0",
+                  "reserve_code": "WQB",
+                  "reserve_name": "Waquoit Bay",
+                  "state": "MA",
+                  "station_code": "wqbmhwq",
+                  "station_name": "Menauhant",
+                  "station_type": 1,
+                  "transmit_channel": 145,
+                  "transmit_time": "00:03:40"
+                },
+                "status": {
+                  "allowed_hour_count_to_miss": 4,
+                  "current_hour_count_missed": 0,
+                  "disable_test": false,
+                  "last_check_status_time": "2015-05-29 19:41:34",
+                  "last_update_time": "2015-05-29 17:45:00",
+                  "min_recs_per_hour": 4,
+                  "station_code": "wqbmhwq"
+                }
+              }
+            }
+        */
+      function telemetry_alerts_app()
+      {
+        var self = this;
+
+        self.view_model = null;
+        self.initialize = function()
+        {
+
+          self.view_model = new telemetry_alert_view_model();
+          //self.view_model.initialize({'test_data':self.test_data});
+          ko.applyBindings(self.view_model);
+          $.ajax({
+            url: "./data/telemetry_alerts.txt",
+            dataType: "json",
+            success: function( data, textStatus, jqXHR)
+                      {
+                        self.view_model.initialize({'test_data': data});
+                      }
+          });
+
+        };
+        self.received_data = function(json_data, code, jqXHR)
+        {
+          view_model.telemetry_alerts_data(json_data);
+        };
+
+        return(self);
+      }
+      app = telemetry_alerts_app();
+      app.initialize();
+
+    </script>
+
+    <script>
+    </script>
+
+
+
+
+
+
+
+  </body>
+</html>

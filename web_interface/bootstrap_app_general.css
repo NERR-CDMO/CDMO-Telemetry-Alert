@@ -1,0 +1,85 @@
+body {
+  font-family: "verdana";
+  font-size: 12px;
+  font-stretch: normal;
+}
+#about {
+  font-size: 14px;
+}
+.app_row {
+  display: table-row;
+}
+.app_container {
+    width: 100%;
+    display: table;
+    table-layout: fixed;
+}
+.left_col
+{
+  display: table-cell;
+  height: 297px;
+  vertical-align: top;
+}
+.right_col
+{
+  display: table-cell;
+  height: 297px;
+  vertical-align: top;
+}
+.middle-column {
+  display: table-cell;
+  /*padding: 10px;*/
+  width: 972px;
+  vertical-align: top;
+}
+.tab-content {
+    height: 620px;
+    border-left: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    padding: 10px;
+
+}
+.cdmo_menu_col {
+  padding-top: 2px;
+  padding-left: 2px;
+  padding-right: 2px;
+  padding-bottom: 2px;
+}
+.app_body_row
+{
+  background-color: #FFFFFF;
+  padding-left: 15px;
+
+  margin: 0px;
+  padding: 0px;
+
+}
+.app_body
+{
+  background-color: #FFFFFF;
+  padding: 0px;
+}
+.header_row {
+  margin: 0px;
+  padding: 0px;
+}
+.header_column {
+  margin: 0px;
+  padding: 0px;
+}
+.bg_row {
+  margin: 0px;
+  padding: 0px;
+}
+.bg_foot {
+  padding-left: 15px;
+}
+.bg_new_left {
+  background: url("../revamp/new/bg_left.gif") no-repeat scroll right top rgba(0, 0, 0, 0);
+  height:100%;
+}
+.bg_new_right {
+  background: url("../revamp/new/bg_right.gif") no-repeat scroll left top rgba(0, 0, 0, 0);
+  height: 100%;
+}
