@@ -1,6 +1,6 @@
 import sys
-#sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
-sys.path.append("D:\scripts\common")
+sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
+#sys.path.append("D:\scripts\common")
 from os.path import join
 
 import logging.config
@@ -33,6 +33,9 @@ class station_metadata(object):
     self.active_dates = kwargs.get('active_dates', None)
     self.state = kwargs.get('state', None)
     self.hads_id = kwargs.get('hads_id', None)
+    if len(self.hads_id) < 8:
+      self.hads_id = None
+
     self.station_type = kwargs.get('station_type', None)
     self.region = kwargs.get('region', None)
     self.is_swmp = kwargs.get('is_swmp', None)
@@ -63,7 +66,8 @@ class station_metadata(object):
     self.logger = None
     if 'logger' in state:
       self.logger = logging.getLogger(state['logger'])
-
+    if len(state['hads_id']) < 8:
+      self.hads_id = None
 
   def to_dict(self):
     transmit_time = None
@@ -418,6 +422,13 @@ class station_telemetry_statistic(shelve_stations_status):
     try:
       telemetry_rec = self.data_connection[station_code]
     except KeyError,e:
+      if self.logger:
+        self.logger.exception(e)
+      telemetry_rec = {}
+      self.data_connection[station_code] = telemetry_rec
+    except EOFError, e:
+      if self.logger:
+        self.logger.exception(e)
       telemetry_rec = {}
       self.data_connection[station_code] = telemetry_rec
 
@@ -550,6 +561,7 @@ class stations_data(object):
 
     stations_failed_count = 0
     stations_checked_count = 0
+    goes_telemetered_check_count = 0
     for station_code in self.stations_metadata_shelve.station_codes():
       check_for_data = False
       station_metadata_rec = self.stations_metadata_shelve[station_code]
@@ -573,6 +585,12 @@ class stations_data(object):
 
       if check_for_data:
         stations_checked_count += 1
+        #We count the goes stations processed so we can send out an immediate alert if they
+        #all fail. Previously I was counting every station, however we are only required to
+        #monitor the GOES telemetry not the other data pulls.
+        if station_metadata_rec.hads_id is not None:
+          goes_telemetered_check_count += 1
+
         if self.logger:
           self.logger.debug("Station: %s checking for telemetry." % (station_code))
         #station_status_rec = self.stations[station_code]['status']
@@ -603,7 +621,8 @@ class stations_data(object):
           telemetry_stat.set_statistic(station_code, station_status_rec.get_last_update_time(), station_status_rec.current_telemetry_dates_cnt)
           self.station_telemetry_shelve.set_station_rec(station_code, telemetry_stat)
 
-    if stations_failed_count == stations_checked_count:
+    if stations_failed_count >= goes_telemetered_check_count:
+    #if stations_failed_count == stations_checked_count:
       if self.logger:
         self.logger.error("All stations status checked failed.")
       self.all_stations_failed = True
