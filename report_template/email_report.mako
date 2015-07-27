@@ -20,7 +20,7 @@
                 </br>
             </div>
             <div class="row">
-                % if all_stations_failed is False:
+                % if len(goes_hemisphere_failed) == 0:
                     <table class="table table-striped table-bordered">
                         <tr>
                             <th>Station Code</th>
@@ -47,7 +47,7 @@
                     </table>
                 % else:
                   <div>
-                    <h2><p class="text-danger">No stations reported this period, check telemetry</p></h2>
+                    <h2><p class="text-danger">No ${goes_hemisphere_failed} stations reported this period, check telemetry</p></h2>
                   </div>
                 % endif
             </div>

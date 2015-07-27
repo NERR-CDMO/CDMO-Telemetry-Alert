@@ -35,7 +35,7 @@ class station_metadata(object):
     self.hads_id = kwargs.get('hads_id', None)
     if len(self.hads_id) < 8:
       self.hads_id = None
-
+    self.goes_satellite = kwargs.get('goes_satellite', None)
     self.station_type = kwargs.get('station_type', None)
     self.region = kwargs.get('region', None)
     self.is_swmp = kwargs.get('is_swmp', None)
@@ -66,7 +66,7 @@ class station_metadata(object):
     self.logger = None
     if 'logger' in state:
       self.logger = logging.getLogger(state['logger'])
-    if len(state['hads_id']) < 8:
+    if state['hads_id'] is not None and len(state['hads_id']) < 8:
       self.hads_id = None
 
   def to_dict(self):
@@ -93,7 +93,8 @@ class station_metadata(object):
       'transmit_channel': self.transmit_channel,
       'transmit_time': transmit_time,
       'export_time': export_time,
-      'min_recs_per_hour': self.min_recs_per_hour
+      'min_recs_per_hour': self.min_recs_per_hour,
+      'goes_satellite': self.goes_satellite
     }
     return ret_val
 
@@ -431,7 +432,11 @@ class station_telemetry_statistic(shelve_stations_status):
         self.logger.exception(e)
       telemetry_rec = {}
       self.data_connection[station_code] = telemetry_rec
-
+    except Exception, e:
+      if self.logger:
+        self.logger.exception(e)
+      telemetry_rec = {}
+      self.data_connection[station_code] = telemetry_rec
     telemetry_rec = self.data_connection[station_code]
     telemetry_rec[station_rec.record_datetime] = station_rec
 
@@ -501,6 +506,8 @@ class stations_data(object):
 
     self.current_check_status_time = None #Time that the test is running.
     self.all_stations_failed = False #Flag that specifies if all stations failed.
+    self.all_east_stations_failed = False #Flag that specifies if all east stations failed.
+    self.all_west_stations_failed = False #Flag that specifies if all west stations failed.
     self.email_interval_hours = 4 #Number of hours between emails.
 
   """
@@ -561,7 +568,11 @@ class stations_data(object):
 
     stations_failed_count = 0
     stations_checked_count = 0
+    east_station_check_count = 0
+    west_station_check_count = 0
     goes_telemetered_check_count = 0
+    east_fail_count = 0
+    west_fail_count = 0
     for station_code in self.stations_metadata_shelve.station_codes():
       check_for_data = False
       station_metadata_rec = self.stations_metadata_shelve[station_code]
@@ -590,9 +601,15 @@ class stations_data(object):
         #monitor the GOES telemetry not the other data pulls.
         if station_metadata_rec.hads_id is not None:
           goes_telemetered_check_count += 1
+          #Keep track of the GOES East and West stations. If all of one or the other
+          #fail, we send alert
+          if station_metadata_rec.goes_satellite == 'E':
+            east_station_check_count += 1
+          elif station_metadata_rec.goes_satellite == 'W':
+            west_station_check_count += 1
 
         if self.logger:
-          self.logger.debug("Station: %s checking for telemetry." % (station_code))
+          self.logger.debug("Station: %s (%s) checking for telemetry." % (station_code, station_metadata_rec.goes_satellite))
         #station_status_rec = self.stations[station_code]['status']
         station_status_rec = self.stations_status_shelve[station_code]
 
@@ -610,6 +627,14 @@ class stations_data(object):
           #Keep a running count of how many station failure we have, if all the expected to report stations fail,
           #we need to report this.
           stations_failed_count += 1
+          #Keep track of East and West GOES fail counts.
+          if station_metadata_rec.hads_id is not None:
+            if station_metadata_rec.goes_satellite == 'E':
+              east_fail_count += 1
+            elif station_metadata_rec.goes_satellite == 'W':
+              west_fail_count += 1
+            else:
+              i=0
         else:
           if self.logger:
             self.logger.debug("Station: %s @ %s is transmitting properly." % (station_code, station_status_rec.last_update_time.strftime("%Y-%m-%d %H:%M:%S")))
@@ -621,11 +646,25 @@ class stations_data(object):
           telemetry_stat.set_statistic(station_code, station_status_rec.get_last_update_time(), station_status_rec.current_telemetry_dates_cnt)
           self.station_telemetry_shelve.set_station_rec(station_code, telemetry_stat)
 
-    if stations_failed_count >= goes_telemetered_check_count:
-    #if stations_failed_count == stations_checked_count:
+    #if stations_failed_count >= goes_telemetered_check_count or\
+    #We keep track of just the GOES telemetered failures of when either we miss all east, west, or all of
+    #both.
+    if (east_fail_count + west_fail_count) >= goes_telemetered_check_count or\
+      east_fail_count >= east_station_check_count or\
+      west_fail_count >= west_station_check_count:
+      fail_code = []
+      if (east_fail_count + west_fail_count) >= goes_telemetered_check_count:
+        self.all_stations_failed = True
+        fail_code.append("stations")
+      else:
+        if east_fail_count >= east_station_check_count:
+          self.all_east_stations_failed = True
+          fail_code.append("east stations")
+        if west_fail_count >= west_station_check_count:
+          self.all_west_stations_failed = True
+          fail_code.append("west stations")
       if self.logger:
-        self.logger.error("All stations status checked failed.")
-      self.all_stations_failed = True
+        self.logger.error("All %s status checked failed." % (",".join(fail_code)))
 
     self.stations_status_shelve.save()
 
@@ -653,13 +692,24 @@ class stations_data(object):
         station_failure_list = self.error_list
       station_failure_list.sort()
 
+      #Call out the specific failure receiver E or W or ALL if they all missed.
+      goes_hemisphere_fail = []
+      if self.all_stations_failed:
+        goes_hemisphere_fail.append('ALL')
+      else:
+        if self.all_east_stations_failed:
+          goes_hemisphere_fail.append('EAST')
+        if self.all_west_stations_failed:
+          goes_hemisphere_fail.append('WEST')
+
+      goes_hemisphere_fail = ",".join(goes_hemisphere_fail)
       #Get the time the test was run.
       est_time = timezone('UTC').localize(self.current_check_status_time).astimezone(eastern)
       template_output = mytemplate.render(test_time=est_time.strftime("%Y-%m-%d %H:%M:%S"),
                                           station_codes=station_failure_list,
                                           station_data={'metadata' : self.stations_metadata_shelve,
                                                         'status' : self.stations_status_shelve},
-                                          all_stations_failed=self.all_stations_failed,
+                                          goes_hemisphere_failed=goes_hemisphere_fail,
                                           tz_obj=eastern)
     except:
       if self.logger:
@@ -673,13 +723,14 @@ class stations_data(object):
       try:
         #Only send an email on the specified interval or if all stations failed to report.
         if (est_time.hour % kwargs['email_interval_hours']) == 0 and est_time.minute < 30\
-          or self.all_stations_failed:
+          or (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed):
           if self.logger:
             self.logger.debug("Emailing test results to: %s" % (kwargs['send_to']))
-          if ('email_host' in kwargs) and (self.all_stations_failed or len(self.error_list)):
+          if ('email_host' in kwargs) and\
+            (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed or len(self.error_list)):
             subject = "[CDMO] Telemetry Alerts"
-            if self.all_stations_failed:
-              subject = "[CDMO ERROR] ALL STATIONS FOR TIME SLOT FAILED TO REPORT"
+            if self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed:
+              subject = "[CDMO ERROR] %s STATIONS FOR TIME SLOT FAILED TO REPORT" % (goes_hemisphere_fail)
 
             email_obj = smtpClass(host=kwargs['email_host'], user=kwargs['email_user'], password=kwargs['email_password'])
             email_obj.from_addr("%s@%s" % (kwargs['email_from_addr'], kwargs['email_host']))
@@ -688,12 +739,12 @@ class stations_data(object):
             email_obj.subject(subject)
             email_obj.send(content_type="html")
         #If all the stations missed, send out a text as well.
-        if self.all_stations_failed and kwargs['text_only_on_all_misses']:
+        if (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed) and kwargs['text_only_on_all_misses']:
           if self.logger:
             self.logger.debug("All stations missed, sending texts to: %s" % (kwargs['text_addresses']))
           email_obj.rcpt_to(kwargs['text_addresses'])
-          email_obj.subject("[CDMO]ALL STATIONS MISSED")
-          email_obj.message("ALL STATIONS MISSED, TELEMETRY MAY BE DOWN.")
+          email_obj.subject("[CDMO]%s STATIONS MISSED" % (goes_hemisphere_fail))
+          email_obj.message("%s STATIONS MISSED, TELEMETRY MAY BE DOWN." % (goes_hemisphere_fail))
           email_obj.send()
 
       except Exception, e:
@@ -769,6 +820,17 @@ class stations_data(object):
     if self.load_sample_stations_file(kwargs['sample_stations_file']):
       if self.load_station_telemetry_setup(kwargs['telemetry_setup_file']):
         if self.load_non_goes_telemetry_setup(kwargs['non_goes_telemetry_setup_file']):
+
+          #Mark the stations either Goes East or West.
+          station_code_keys = self.stations_metadata_shelve.get_station_codes()
+          for station_id in station_code_keys:
+            metadata_rec = self.stations_metadata_shelve[station_id]
+            if station_id in kwargs['west_station_list']:
+              metadata_rec.goes_satellite = 'W'
+            else:
+              metadata_rec.goes_satellite = 'E'
+            self.stations_metadata_shelve[station_id] = metadata_rec
+
           #Save the data.
           self.stations_metadata_shelve.save()
     return
@@ -1017,7 +1079,7 @@ def main():
   parser.add_option("-f", "--SaveAllStatus", dest="save_all_status", default=False, action="store_true",
                     help="Flag that specifies to load and re-save the status, utility when we add a new field and want to keep current settings." )
   parser.add_option("-r", "--GenerateReport", dest="gen_report", default=False, action="store_true",
-                    help="" )
+                    help="")
   (options, args) = parser.parse_args()
 
   configFile = ConfigParser.RawConfigParser()
@@ -1050,7 +1112,7 @@ def main():
         telemetry_metadata_file = configFile.get('telemetry_settings', 'data_file')
         non_goes_telemetry_metadata_file = configFile.get('telemetry_settings', 'non_goes_data_file')
         local_stations_file = configFile.get('station_data_settings', 'sample_stations_file')
-
+        west_station_list = configFile.get('telemetry_settings', 'west_stations').split(',')
       except ConfigParser.NoOptionError,e:
         if logger:
           logger.exception(e)
@@ -1058,7 +1120,8 @@ def main():
         data.update_station_metadata(sample_stations_file=local_stations_file,
                                    telemetry_setup_file=telemetry_metadata_file,
                                    non_goes_telemetry_setup_file=non_goes_telemetry_metadata_file,
-                                   metadata_shelve_file=metadata_shelve_file)
+                                   metadata_shelve_file=metadata_shelve_file,
+                                   west_station_list=west_station_list)
     if options.check_status:
       try:
         email_host = configFile.get('email_settings', 'server')
