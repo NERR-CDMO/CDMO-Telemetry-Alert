@@ -1,6 +1,6 @@
 import sys
-sys.path.append('/Users/danramage/Documents/workspace/CDMO/CDMO-Telemetry-Alert')
-#sys.path.append("D:\scripts\common")
+#sys.path.append('/Users/danramage/Documents/workspace/CDMO/CDMO-Telemetry-Alert')
+sys.path.append("D:\scripts\common")
 
 import logging.config
 import optparse
@@ -42,6 +42,7 @@ def main():
     try:
       metadata_shelve_file = configFile.get('settings', 'metadata_shelve_file')
       status_shelve_file = configFile.get('settings', 'status_shelve_file')
+      telemetry_stats_shelve_file = configFile.get('settings', 'telemetry_stats_shelve_file')
       json_out_file = configFile.get('json_settings', 'json_outfile')
     except ConfigParser.NoOptionError,e:
       if logger:
@@ -49,7 +50,8 @@ def main():
     else:
       data = stations_data()
       data.initialize_data_sources(metadata_shelve_file=metadata_shelve_file,
-                                      status_shelve_file=status_shelve_file)
+                                      status_shelve_file=status_shelve_file,
+                                      telemetry_stats_shelve_file=telemetry_stats_shelve_file)
       for station_code in json_data:
         ascii_code = station_code.encode("ascii")
         if logger:
