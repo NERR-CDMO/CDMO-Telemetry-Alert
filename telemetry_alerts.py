@@ -1,6 +1,6 @@
 import sys
-sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
-#sys.path.append("D:\scripts\common")
+#sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
+sys.path.append("D:\scripts\common")
 from os.path import join
 
 import logging.config
@@ -1012,6 +1012,9 @@ class stations_data(object):
               if station_code not in self.stations:
                 #Make sure the station is real time.
                 if row["Real Time"].strip() == 'R':
+                  if self.logger:
+                    self.logger.debug("Adding station: %s" % (station_code))
+
                   self.stations_metadata_shelve[station_code] = station_metadata(True,
                                                              state=row["State"].strip().upper(),
                                                              reserve_name=row["Reserve Name"].strip(),
