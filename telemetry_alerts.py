@@ -1,6 +1,6 @@
 import sys
-#sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
-sys.path.append("D:\scripts\common")
+sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
+#sys.path.append("D:\scripts\common")
 from os.path import join
 
 import logging.config
@@ -861,8 +861,10 @@ class stations_data(object):
             metadata_rec = self.stations_metadata_shelve[station_id]
             metadata_rec.transmit_time = datetime.strptime(row['REPORTING_TIME'], '%H:%M:%S')
             metadata_rec.export_time = ""
-            if metadata_rec.transmit_time.time() < datetime.strptime('00:12:00', "%H:%M:%S").time() or\
-              metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
+            #if metadata_rec.transmit_time.time() <= datetime.strptime('00:12:00', "%H:%M:%S").time() or\
+            #  metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
+            if metadata_rec.transmit_time.time() <= datetime.strptime('00:10:40', "%H:%M:%S").time() or\
+              metadata_rec.transmit_time.time() > datetime.strptime('00:40:40', "%H:%M:%S").time():
               metadata_rec.export_time = datetime.strptime('00:12:00', "%H:%M:%S")
             else:
               metadata_rec.export_time = datetime.strptime('00:42:00', "%H:%M:%S")
@@ -949,8 +951,10 @@ class stations_data(object):
             #a couple of windows it uses. Based on the transmit time, we need to assign the export_time.
             #Currently we have one at 00:12:00 and 00:42:00
             metadata_rec.export_time = ""
-            if metadata_rec.transmit_time.time() < datetime.strptime('00:12:00', "%H:%M:%S").time() or\
-              metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
+            #if metadata_rec.transmit_time.time() < datetime.strptime('00:12:00', "%H:%M:%S").time() or\
+            #  metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
+            if metadata_rec.transmit_time.time() <= datetime.strptime('00:10:40', "%H:%M:%S").time() or\
+              metadata_rec.transmit_time.time() > datetime.strptime('00:40:40', "%H:%M:%S").time():
               metadata_rec.export_time = datetime.strptime('00:12:00', "%H:%M:%S")
             else:
               metadata_rec.export_time = datetime.strptime('00:42:00', "%H:%M:%S")
