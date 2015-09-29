@@ -219,7 +219,8 @@ class station_status(object):
           self.last_update_time = current_telemetry_dates[-1]
           if current_hour > self.last_update_time:
             offset = current_hour - self.last_update_time
-            if offset.seconds >= (self.allowed_hour_count_to_miss * 3600):
+            if offset.seconds >= (2 * 3600):
+            #if offset.seconds >= (self.allowed_hour_count_to_miss * 3600):
               self.status_field.append(station_status.OLD_DATA)
               check_fail = True
           else:
