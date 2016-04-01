@@ -380,6 +380,9 @@ class shelve_stations_status(object):
   def __setitem__(self, station_code, rec):
     return self.set_station_rec(station_code, rec)
 
+  def __delitem__(self, key):
+    del self.data_connection[key]
+
   def get_station_codes(self):
     keys = self.data_connection.keys()
     return keys
@@ -1036,6 +1039,10 @@ class stations_data(object):
                 else:
                   if self.logger:
                     self.logger.debug("Station: %s is not real time." % (station_code))
+                  if station_code in self.stations_metadata_shelve.station_codes():
+                    if self.logger:
+                      self.logger.debug("Station: %s no longer real time, removing from shelve." % (station_code))
+                    del self.stations_metadata_shelve[station_code]
           line_num += 1
         if self.logger:
           self.logger.debug("%d station info processed" % (len(self.stations)))
