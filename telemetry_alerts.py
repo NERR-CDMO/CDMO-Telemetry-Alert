@@ -8,7 +8,7 @@ import optparse
 #import requests
 import csv
 import ConfigParser
-from datetime import datetime
+from datetime import datetime, time
 from pytz import timezone
 
 import shelve
@@ -99,7 +99,7 @@ class station_metadata(object):
     return ret_val
 
 class station_status(object):
-  (ALL_DATA, OLD_DATA, MISSING_RECS, FUTURE_DATA, MISSING_FILE, NO_DATA) = (0, 1, 2, 3, 4, 5)
+  (ALL_DATA, OLD_DATA, MISSING_RECS, FUTURE_DATA, MISSING_FILE, NO_DATA, UNPROCESSED_DATA) = (0, 1, 2, 3, 4, 5, 6)
   def __init__(self, use_logging=True, **kwargs):
     self.logger = None
     if use_logging:
@@ -115,7 +115,7 @@ class station_status(object):
     self.status_field = kwargs.get('status_field', None)
     self.record_updated = kwargs.get('record_updated', False)
 
-    self.current_telemetry_dates_cnt = 0
+    self.current_telemetry_dates_cnt = kwargs.get('current_telemetry_dates_cnt', 0)
 
     if self.last_update_time is not None:
       self.last_update_time = datetime.strptime(self.last_update_time, "%Y-%m-%d %H:%M:%S")
@@ -213,14 +213,18 @@ class station_status(object):
             self.current_hour_count_missed += 1
             self.status_field = [station_status.MISSING_RECS]
             check_fail = True
+          #Do we have more records than we should? Could be an issue with the ingestion engine.
+          elif self.current_telemetry_dates_cnt > (kwargs['min_recs_per_hour'] * 2):
+            self.status_field = [station_status.UNPROCESSED_DATA]
+
           #Dates are stored in ascending manner, so let's start at back with our check.
           rec_cnt = 0
           #For now, we just check the last record in the file.
           self.last_update_time = current_telemetry_dates[-1]
           if current_hour > self.last_update_time:
             offset = current_hour - self.last_update_time
-            if offset.seconds >= (2 * 3600):
-            #if offset.seconds >= (self.allowed_hour_count_to_miss * 3600):
+            #DWR 2016-09-01 Use total_seconds() function for correct value, not seconds.
+            if offset.total_seconds() >= (2 * 3600):
               self.status_field.append(station_status.OLD_DATA)
               check_fail = True
           else:
@@ -319,14 +323,16 @@ class station_status(object):
       for status in self.status_field:
         if status == station_status.NO_DATA:
           message_list.append("No data present in file.")
-        elif status == station_status.OLD_DATA:
-          message_list.append("Old data present in file. Last record timestamp: %s" % (self.last_update_time.strftime("%Y-%m-%d %H:%M:%S")))
-        elif status == station_status.FUTURE_DATA:
-          message_list.append("Data in file is newer than testing time.")
         elif status == station_status.MISSING_FILE:
           message_list.append("No telemetry data file found.")
         elif status == station_status.MISSING_RECS:
           message_list.append("File is missing telemetry records.")
+        elif status == station_status.OLD_DATA:
+          message_list.append("Old data present in file. Last record timestamp: %s" % (self.last_update_time.strftime("%Y-%m-%d %H:%M:%S")))
+        elif status == station_status.UNPROCESSED_DATA:
+          message_list.append("More than 1 hour of records in file, check Telemetry Ingestion.")
+        elif status == station_status.FUTURE_DATA:
+          message_list.append("Data in file is newer than testing time.")
         elif status == station_status.ALL_DATA:
           message_list.append("Telemetry is good.")
     return message_list
@@ -637,8 +643,6 @@ class stations_data(object):
               east_fail_count += 1
             elif station_metadata_rec.goes_satellite == 'W':
               west_fail_count += 1
-            else:
-              i=0
         else:
           if self.logger:
             self.logger.debug("Station: %s @ %s is transmitting properly." % (station_code, station_status_rec.last_update_time.strftime("%Y-%m-%d %H:%M:%S")))
@@ -945,12 +949,16 @@ class stations_data(object):
           station_id = row['STATION_ID'].lower()
           if station_id in self.stations_metadata_shelve.station_codes():
             metadata_rec = self.stations_metadata_shelve[station_id]
-            metadata_rec.transmit_time = datetime.strptime(row['REPORTING_TIME'], '%H:%M:%S')
+            #DWR 2016-06-10
+            date_part, time_part = row['REPORTING_TIME'].split(' ')
+            hour,minute,second = time_part.split(':')
+            metadata_rec.transmit_time = datetime(year=1900, month=1, day=1, hour=int(hour), minute=int(minute), second=int(second))
+            #metadata_rec.transmit_time = datetime.strptime(row['REPORTING_TIME'], '%H:%M:%S')
             #Transmit times are only minute/second reference for each hour, so if we have
             #any actual hour values, set them to 0.
             if metadata_rec.transmit_time.hour != 0:
               metadata_rec.transmit_time = metadata_rec.transmit_time.replace(hour=0)
-            metadata_rec.transmit_channel = int(row['PRIMARY_CHANNEL'])
+            metadata_rec.transmit_channel = int(float(row['PRIMARY_CHANNEL']))
             #The telemetry decoder does not create the CSV files at the time of decoding, there are
             #a couple of windows it uses. Based on the transmit time, we need to assign the export_time.
             #Currently we have one at 00:12:00 and 00:42:00
@@ -1081,6 +1089,60 @@ class stations_data(object):
       if self.logger:
         self.logger.exception(e)
 
+  def output_station_data_time_report(self, **kwargs):
+    report_out_file = None
+    try:
+      report_out_file = open(kwargs['report_out_filename'], 'w')
+    except IOError,e:
+      if self.logger:
+        self.logger.exception(e)
+    else:
+      station_codes = self.stations_metadata_shelve.get_station_codes()
+      station_codes.sort()
+
+
+
+      reserve_dict = {}
+      for station in station_codes:
+        reserve_name_state = '%s, %s' % (self.stations_metadata_shelve[station].reserve_name, self.stations_metadata_shelve[station].state)
+        if reserve_name_state not in reserve_dict:
+          reserve_dict[reserve_name_state] = []
+        platforms = reserve_dict[reserve_name_state]
+        platforms.append(station)
+
+      top_of_hour_stations = []
+      bottom_of_hour_stations = []
+      top_of_hour_export = datetime.strptime('00:12:00', "%H:%M:%S")
+      #bottom_of_hour_export = datetime.strptime('00:42:00', "%H:%M:%S")
+      for code in station_codes:
+        if self.stations_metadata_shelve[code].export_time is not None:
+          if self.stations_metadata_shelve[code].export_time.time() == top_of_hour_export.time():
+            top_of_hour_stations.append(code)
+          else:
+            bottom_of_hour_stations.append(code)
+        else:
+          if self.logger:
+            self.logger.error("Station: %s has no export time" % (code))
+      try:
+        station_data = Template(filename=kwargs['report_template'])
+        template_output = station_data.render(top_of_hour_stations=top_of_hour_stations,
+                                              bottom_of_hour_stations=bottom_of_hour_stations,
+                                              reserves=reserve_dict,
+                                              station_data={'metadata' : self.stations_metadata_shelve,
+                                                          'status' : self.stations_status_shelve})
+      except:
+        if self.logger:
+          self.logger.exception(makoExceptions.text_error_template().render())
+      else:
+        if report_out_file is not None:
+          try:
+            report_out_file.write(template_output)
+            report_out_file.close()
+          except IOError as e:
+            if self.logger:
+              self.logger.exception(e)
+
+    return
 def main():
   parser = optparse.OptionParser()
   parser.add_option("-c", "--ConfigFile", dest="configFile",
@@ -1095,6 +1157,9 @@ def main():
                     help="Flag that specifies to load and re-save the status, utility when we add a new field and want to keep current settings." )
   parser.add_option("-r", "--GenerateReport", dest="gen_report", default=False, action="store_true",
                     help="")
+  parser.add_option("-d", "--StationTimeReport", dest="build_time_report", default=False, action="store_true",
+                    help="Flag that specifies building the report that shows when station transmits and when data is available from CDMO site." )
+
   (options, args) = parser.parse_args()
 
   configFile = ConfigParser.RawConfigParser()
@@ -1137,6 +1202,16 @@ def main():
                                    non_goes_telemetry_setup_file=non_goes_telemetry_metadata_file,
                                    metadata_shelve_file=metadata_shelve_file,
                                    west_station_list=west_station_list)
+        if options.build_time_report:
+          try:
+            report_template = configFile.get('station_time_report', 'template')
+            output_filename = configFile.get('station_time_report', 'report_file')
+            data.output_station_data_time_report(report_out_filename=output_filename,
+                                                 report_template=report_template)
+          except ConfigParser.NoOptionError,e:
+            if logger:
+              logger.exception(e)
+
     if options.check_status:
       try:
         email_host = configFile.get('email_settings', 'server')
@@ -1175,6 +1250,7 @@ def main():
                                     status_shelve_file=status_shelve_file)
       if options.build_json_file:
         data.write_json_data(json_out_file=json_out_file)
+
 
       #if options.save_all_status:
       #  data.save_status(save_all=True)
