@@ -1,6 +1,8 @@
 import sys
+#sys.path.append("../commonfiles/python")
 #sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
 sys.path.append("D:\scripts\common")
+
 from os.path import join
 
 import logging.config
@@ -893,7 +895,15 @@ class stations_data(object):
     return ret_val
 
   def load_station_telemetry_setup(self, file_name):
+    header_row = [
+      "STATION_ID",
+      "SATELLITE_ID",
+      "PRIMARY_CHANNEL",
+      "REPORTING_TIME",
+      "EXPORT_TIME"]
+
     ret_val = False
+    """
     header_row = [
       "STATION_ID",
       "ENABLED",
@@ -932,6 +942,7 @@ class stations_data(object):
       "SETUP_FILE_NAME",
       "PICTURE_FILE_NAME"
     ]
+    """
     try:
       if self.logger:
         self.logger.debug("Start reading telemetry info file: %s" % (file_name))
@@ -959,17 +970,23 @@ class stations_data(object):
             if metadata_rec.transmit_time.hour != 0:
               metadata_rec.transmit_time = metadata_rec.transmit_time.replace(hour=0)
             metadata_rec.transmit_channel = int(float(row['PRIMARY_CHANNEL']))
+            metadata_rec.export_time = ""
             #The telemetry decoder does not create the CSV files at the time of decoding, there are
             #a couple of windows it uses. Based on the transmit time, we need to assign the export_time.
             #Currently we have one at 00:12:00 and 00:42:00
-            metadata_rec.export_time = ""
-            #if metadata_rec.transmit_time.time() < datetime.strptime('00:12:00', "%H:%M:%S").time() or\
-            #  metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
-            if metadata_rec.transmit_time.time() <= datetime.strptime('00:10:40', "%H:%M:%S").time() or\
-              metadata_rec.transmit_time.time() > datetime.strptime('00:40:40', "%H:%M:%S").time():
-              metadata_rec.export_time = datetime.strptime('00:12:00', "%H:%M:%S")
+            #If we want to override the assumptions, we can use the EXPORT_TIME in the file, otherwise
+            #the default behavior occurs.
+            if len(row['EXPORT_TIME']) == 0:
+              #if metadata_rec.transmit_time.time() < datetime.strptime('00:12:00', "%H:%M:%S").time() or\
+              #  metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
+              if metadata_rec.transmit_time.time() <= datetime.strptime('00:10:40', "%H:%M:%S").time() or\
+                metadata_rec.transmit_time.time() > datetime.strptime('00:40:40', "%H:%M:%S").time():
+                metadata_rec.export_time = datetime.strptime('00:12:00', "%H:%M:%S")
+              else:
+                metadata_rec.export_time = datetime.strptime('00:42:00', "%H:%M:%S")
             else:
-              metadata_rec.export_time = datetime.strptime('00:42:00', "%H:%M:%S")
+              metadata_rec.export_time = datetime.strptime(row['EXPORT_TIME'], "%H:%M:%S")
+
             #Now save the updated rec back.
             self.stations_metadata_shelve[station_id] = metadata_rec
           else:
