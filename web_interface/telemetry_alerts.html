@@ -11,30 +11,30 @@
 
     <!-- Bootstrap core CSS -->
     <!--
-    <link href="../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="../../resources/js/bootstrap/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet">
+    <link href="../../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="../../../resources/js/bootstrap/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet">
     <link href="/newIncludes/Default.css" rel="stylesheet" type="text/css" media="screen" />
     <link rel="../../stylesheet" href="/newIncludes/stylesheet.css" type="text/css" />
     <link href="../../menus/menu_style.css" type="text/css" rel="stylesheet">
 
-    <script type="application/javascript" src="../../resources/js/jquery/jquery-1.11.1.min.js"></script>
-    <script type="application/javascript" src="../../resources/js/bootstrap/bootstrap-3.3.4/js/bootstrap.min.js"></script>
-    <script type="application/javascript" src="../../resources/js/knockout/knockout-3.2.0.js"></script>
+    <script type="application/javascript" src="../../../resources/js/jquery/jquery-1.11.1.min.js"></script>
+    <script type="application/javascript" src="../../../resources/js/bootstrap/bootstrap-3.3.4/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="../../../resources/js/knockout/knockout-3.2.0.js"></script>
     <script type="application/javascript" src="telemetry_alert_view_model.js"></script>
     -->
 
-    <link href="../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="../resources/js/bootstrap/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet">
-    <link href="/newIncludes/Default.css" rel="stylesheet" type="text/css" media="screen" />
+    <link href="../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../resources/js/bootstrap/bootstrap-3.3.4/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="../../resources/js/bootstrap/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet">
+    <link href="../../newIncludes/Default.css" rel="stylesheet" type="text/css" media="screen" />
     <link rel="../stylesheet" href="/newIncludes/stylesheet.css" type="text/css" />
-    <link href="../menus/menu_style.css" type="text/css" rel="stylesheet">
+    <link href="../../menus/menu_style.css" type="text/css" rel="stylesheet">
     <link href="bootstrap_app_general.css" type="text/css" rel="stylesheet">
 
-    <script type="application/javascript" src="../resources/js/jquery/jquery-1.11.1.min.js"></script>
-    <script type="application/javascript" src="../resources/js/bootstrap/bootstrap-3.3.4/js/bootstrap.min.js"></script>
-    <script type="application/javascript" src="../resources/js/knockout/knockout-3.2.0.js"></script>
+    <script type="application/javascript" src="../../resources/js/jquery/jquery-1.11.1.min.js"></script>
+    <script type="application/javascript" src="../../resources/js/bootstrap/bootstrap-3.3.4/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="../../resources/js/knockout/knockout-3.2.0.js"></script>
     <script type="application/javascript" src="telemetry_alert_view_model.js"></script>
   </head>
   <body>
@@ -75,7 +75,7 @@
           <div class="">
             <div class="row header_row">
               <div class="col-xs-12 header_column">
-                <img src="../revamp/banner_top.jpg">
+                <img src="../../revamp/banner_top.jpg">
               </div>
             </div>
             <div class="row app_body_row">
@@ -88,6 +88,9 @@
               <div class="row text-center">
                 <div class="col-xs-2">
                   <h4>Station Code</h4>
+                </div>
+                <div class="col-xs-2">
+                  <h4>GOES ID</h4>
                 </div>
                 <div class="col-xs-1">
                   <h4>Test Enabled</h4>
@@ -105,9 +108,6 @@
                   <h4>Current Issue</h4>
                 </div>
               </div>
-                <!--
-                <pre data-bind="text: JSON.stringify(ko.toJS($data.metadata), null, 2)"></pre>
-                -->
 
               <div data-bind="foreach: station_data">
                 <div class="row text-center" data-bind="attr: {id: station_code + '_row'}, css: get_status_class()">
@@ -116,6 +116,12 @@
                   </div>
                   <div class="col-xs-2" data-bind="attr: {id: station_code + '_code_col'}">
                     <span data-bind="text: $data.station_code"></span>
+                  </div>
+                  <div class="col-xs-2" data-bind="attr: {id: station_code + '_goes_col'}">
+                    <a data-bind="text: $data.hads_id, attr: {href: 'https://hads.ncep.noaa.gov/cgi-bin/hads/interactiveDisplays/displayMetaData.pl?table=dcp&nesdis_id=' + $data.hads_id}" target="_new"></a>
+                    <!--
+                    <span data-bind="text: $data.hads_id"></span>
+                    -->
                   </div>
                   <div class="col-xs-1" data-bind="attr: {id: station_code + '_test_enable_col'}">
                     <input type="checkbox" data-bind="checked: test_enabled">

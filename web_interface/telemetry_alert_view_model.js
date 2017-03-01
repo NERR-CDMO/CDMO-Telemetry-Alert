@@ -3,6 +3,7 @@ function station_settings(init_data)
   var self = this;
 
   self.station_code = init_data.metadata.station_code || "";
+  self.hads_id = init_data.metadata.hads_id || "";
   self.test_enabled = ko.observable(init_data.status.disable_test ? false : true || "");
   self.allowed_hour_count_to_miss = ko.observable(init_data.status.allowed_hour_count_to_miss || "");
   self.current_hour_count_missed = init_data.status.current_hour_count_missed || "";
