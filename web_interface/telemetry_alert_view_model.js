@@ -8,6 +8,7 @@ function station_settings(init_data)
   self.allowed_hour_count_to_miss = ko.observable(init_data.status.allowed_hour_count_to_miss || "");
   self.current_hour_count_missed = init_data.status.current_hour_count_missed || "";
   self.last_update_time = ko.observable(init_data.status.last_update_time || "");
+  self.last_check_status_time = ko.observable(init_data.status.last_check_status_time || "");
   self.status_field_text = ko.observable(init_data.status.status_field_text || "");
   //self.transmit_time = ko.observable(init_data.metadata.transmit_time || "");
   //self.export_time = ko.observable(init_data.metadata.export_time || "");

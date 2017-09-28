@@ -1,7 +1,7 @@
 import sys
 #sys.path.append("../commonfiles/python")
-#sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
-sys.path.append("D:\scripts\common")
+sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
+#sys.path.append("D:\scripts\common")
 
 from os.path import join
 
@@ -354,7 +354,7 @@ class station_telemetry_stat(object):
     # but add the name of the object used to create the logger.
     if self.logger is not None:
       del d['logger']
-      d['logger'] = __name__
+      d['logger'] = self.__class__.__name__
 
     return d
 
@@ -431,6 +431,14 @@ class station_telemetry_statistic(shelve_stations_status):
   def __init__(self, use_logging, **kwargs):
     shelve_stations_status.__init__(self, use_logging, **kwargs)
 
+  def station_codes(self):
+    for station_code in self.data_connection:
+      yield station_code
+
+  def save(self):
+    self.data_connection.close()
+    self.data_connection = shelve.open(self.filename, protocol=self.protocol)
+
   def set_station_rec(self, station_code, station_rec):
     try:
       telemetry_rec = self.data_connection[station_code]
@@ -449,10 +457,23 @@ class station_telemetry_statistic(shelve_stations_status):
         self.logger.exception(e)
       telemetry_rec = {}
       self.data_connection[station_code] = telemetry_rec
-    telemetry_rec = self.data_connection[station_code]
-    telemetry_rec[station_rec.record_datetime] = station_rec
 
-    self.data_connection[station_code] = telemetry_rec
+    try:
+      telemetry_rec = self.data_connection[station_code]
+      #telemetry_rec[station_rec.record_datetime.strftime('%Y-%m-%d %H:%M:%S')] = station_rec
+      telemetry_rec[station_rec.record_datetime] = station_rec
+      self.data_connection[station_code] = telemetry_rec
+    except Exception, e:
+      if self.logger:
+        self.logger.exception(e)
+
+
+  def get_station_rec(self, station_code):
+    try:
+      station_status_rec = self.data_connection[station_code]
+      return station_status_rec
+    except (KeyError, AttributeError) as e:
+      raise e
 
 """
 class station_data(object):
@@ -509,7 +530,7 @@ class stations_data(object):
       self.logger = logging.getLogger(__name__)
 
     self.stations = {}            #Dictionary keyed on station code that contains the metdata and status
-    self.export_intervals = None  #Intervals when the telemetry exports data.
+    #self.export_intervals = None  #Intervals when the telemetry exports data.
     self.error_list = []          #List of stations that haveI j status issues.
 
     self.stations_metadata_shelve = shelve_stations_metadata(True)
@@ -549,8 +570,11 @@ class stations_data(object):
 
     if 'telemetry_stats_shelve_file' in kwargs:
       self.station_telemetry_shelve.open(shelve_file=kwargs['telemetry_stats_shelve_file'], protocol=2)
-
-      self.export_intervals = [datetime.strptime("00:12:00", "%H:%M:%S"), datetime.strptime("00:42:00", "%H:%M:%S")]
+      """
+      self.export_intervals = [datetime.strptime("00:00:00", "%H:%M:%S"),
+                               datetime.strptime("00:12:00", "%H:%M:%S"),
+                               datetime.strptime("00:42:00", "%H:%M:%S")]
+      """
       return True
 
     return False
@@ -572,11 +596,14 @@ class stations_data(object):
     #This testing will occur before the ingestion and we use the now_time to check for stations
     #that should have transmitted.not
     self.current_check_status_time = datetime.utcnow()
-    test_time = self.current_check_status_time.replace(hour = 0)
+    test_time = self.current_check_status_time.replace(hour=0, second=0)
+    test_time = self.current_check_status_time.replace(hour=0,minute=0,second=0)
 
+    """
     bottom_hour = False
     if test_time.time() >= self.export_intervals[0].time() and test_time.time() < self.export_intervals[1].time():
       bottom_hour = True
+    """
 
     stations_failed_count = 0
     stations_checked_count = 0
@@ -585,6 +612,18 @@ class stations_data(object):
     goes_telemetered_check_count = 0
     east_fail_count = 0
     west_fail_count = 0
+    #Add 30 minutes as a temp placeholder, otherwise running the alerts check every 15 minutes
+    #causes the 00:30:00 check to fail out since the majority of our export times are either
+    #00:12:00 or 00:42:00. So this means any stations that export at 00:42:00 would look like
+    #they failed when we run check at 00:30:00 since it is between 12 and 42.
+    export_times = [datetime.strptime('00:30:00', '%H:%M:%S')]
+    #Create a list of the export times.
+    for station_code in self.stations_metadata_shelve.station_codes():
+      station_metadata_rec = self.stations_metadata_shelve[station_code]
+      if station_metadata_rec.export_time is not None and\
+          station_metadata_rec.export_time not in export_times:
+        export_times.append(station_metadata_rec.export_time)
+    export_times.sort()
     for station_code in self.stations_metadata_shelve.station_codes():
       check_for_data = False
       station_metadata_rec = self.stations_metadata_shelve[station_code]
@@ -598,9 +637,28 @@ class stations_data(object):
         self.logger.debug("Station: %s Transmit Time: %s Export Time: %s" % (station_code, transmit_time, export_time))
 
       if station_metadata_rec.export_time is not None:
+        #Determine which export time the test time falls between. When we find the
+        #export interval, determine if the current stations export time is the export interval
+        #if it is, then we do the telemetry check.
+        for ndx, export_interval in enumerate(export_times):
+          start_time = export_times[ndx].time()
+          if ndx + 1 != len(export_times):
+            end_time = export_times[ndx+1].time()
+            if test_time.time() >= start_time and test_time.time() < end_time:
+              if station_metadata_rec.export_time.time() == export_interval.time():
+                check_for_data = True
+                break
+          else:
+            if test_time.time() > start_time:
+              if station_metadata_rec.export_time.time() == export_interval.time():
+                check_for_data = True
+                break
+
+        """
         if bottom_hour and station_metadata_rec.export_time == self.export_intervals[0] or\
           not bottom_hour and station_metadata_rec.export_time == self.export_intervals[1]:
           check_for_data = True
+        """
 
       #Non GOES stations will always be checked.
       else:
@@ -677,7 +735,7 @@ class stations_data(object):
         self.logger.error("All %s status checked failed." % (",".join(fail_code)))
 
     self.stations_status_shelve.save()
-
+    self.station_telemetry_shelve.save()
 
   def output_results(self, **kwargs):
     if self.logger:
@@ -1179,6 +1237,11 @@ def main():
 
   (options, args) = parser.parse_args()
 
+  """
+  options.configFile = "D:\\scripts\\telemetry_alerts\\telemetry_alerts.ini"
+  options.check_status = True
+  
+  """
   configFile = ConfigParser.RawConfigParser()
   configFile.read(options.configFile)
 

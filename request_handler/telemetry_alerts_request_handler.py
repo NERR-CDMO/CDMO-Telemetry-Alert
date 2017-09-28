@@ -29,8 +29,8 @@ def main():
     logger = logging.getLogger("telemetry_alert_logging")
     logger.info("Log file opened.")
 
-  json_string = urllib.unquote(options.json_data)
-  #json_string = '{"cbmjbmet":{"test_disabled":false,"allowed_hour_count_to_miss":4}}'
+  #json_string = urllib.unquote(options.json_data)
+  json_string = '{"cbmjbmet":{"test_disabled":false,"allowed_hour_count_to_miss":4}}'
   if logger:
     logger.debug("JSON Data: %s" % (json_string))
   try:
