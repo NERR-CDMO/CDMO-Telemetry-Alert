@@ -1,7 +1,6 @@
 import sys
-#sys.path.append("../commonfiles/python")
-sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
-#sys.path.append("D:\scripts\common")
+#sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
+sys.path.append("D:\scripts\common")
 
 from os.path import join
 
@@ -597,7 +596,7 @@ class stations_data(object):
     #that should have transmitted.not
     self.current_check_status_time = datetime.utcnow()
     test_time = self.current_check_status_time.replace(hour=0, second=0)
-    test_time = self.current_check_status_time.replace(hour=0,minute=0,second=0)
+    #test_time = self.current_check_status_time.replace(hour=0,minute=0,second=0)
 
     """
     bottom_hour = False
@@ -717,6 +716,22 @@ class stations_data(object):
     #if stations_failed_count >= goes_telemetered_check_count or\
     #We keep track of just the GOES telemetered failures of when either we miss all east, west, or all of
     #both.
+    #Add check to handle the fact that we might not have any stations to check.
+    fail_code = []
+    if (east_fail_count + west_fail_count) >= goes_telemetered_check_count:
+      self.all_stations_failed = True
+      fail_code.append("stations")
+    else:
+      if east_station_check_count and east_fail_count >= east_station_check_count:
+        self.all_east_stations_failed = True
+        fail_code.append("east stations")
+      if west_station_check_count and west_fail_count >= west_station_check_count:
+        self.all_west_stations_failed = True
+        fail_code.append("west stations")
+    if len(fail_code):
+      if self.logger:
+        self.logger.error("All %s status checked failed." % (",".join(fail_code)))
+    """
     if (east_fail_count + west_fail_count) >= goes_telemetered_check_count or\
       east_fail_count >= east_station_check_count or\
       west_fail_count >= west_station_check_count:
@@ -725,15 +740,16 @@ class stations_data(object):
         self.all_stations_failed = True
         fail_code.append("stations")
       else:
-        if east_fail_count >= east_station_check_count:
+        if east_station_check_count and east_fail_count >= east_station_check_count:
           self.all_east_stations_failed = True
           fail_code.append("east stations")
-        if west_fail_count >= west_station_check_count:
+        if west_station_check_count and west_fail_count >= west_station_check_count:
           self.all_west_stations_failed = True
           fail_code.append("west stations")
-      if self.logger:
-        self.logger.error("All %s status checked failed." % (",".join(fail_code)))
-
+      if len(fail_code):
+        if self.logger:
+          self.logger.error("All %s status checked failed." % (",".join(fail_code)))
+    """
     self.stations_status_shelve.save()
     self.station_telemetry_shelve.save()
 
