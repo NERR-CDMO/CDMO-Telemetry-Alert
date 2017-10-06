@@ -596,7 +596,7 @@ class stations_data(object):
     #that should have transmitted.not
     self.current_check_status_time = datetime.utcnow()
     test_time = self.current_check_status_time.replace(hour=0, second=0)
-    #test_time = self.current_check_status_time.replace(hour=0,minute=0,second=0)
+    #test_time = self.current_check_status_time.replace(hour=0,minute=30,second=0)
 
     """
     bottom_hour = False
@@ -718,7 +718,8 @@ class stations_data(object):
     #both.
     #Add check to handle the fact that we might not have any stations to check.
     fail_code = []
-    if (east_fail_count + west_fail_count) >= goes_telemetered_check_count:
+    if (east_station_check_count > 0 and west_station_check_count > 0) and \
+        (east_fail_count + west_fail_count) >= goes_telemetered_check_count:
       self.all_stations_failed = True
       fail_code.append("stations")
     else:
@@ -1030,43 +1031,45 @@ class stations_data(object):
       #get the transmit time from the file.
       line_num = 0
       for row in dict_file:
-        if line_num > 0:
-          station_id = row['STATION_ID'].lower()
-          if station_id in self.stations_metadata_shelve.station_codes():
-            metadata_rec = self.stations_metadata_shelve[station_id]
-            #DWR 2016-06-10
-            date_part, time_part = row['REPORTING_TIME'].split(' ')
-            hour,minute,second = time_part.split(':')
-            metadata_rec.transmit_time = datetime(year=1900, month=1, day=1, hour=int(hour), minute=int(minute), second=int(second))
-            #metadata_rec.transmit_time = datetime.strptime(row['REPORTING_TIME'], '%H:%M:%S')
-            #Transmit times are only minute/second reference for each hour, so if we have
-            #any actual hour values, set them to 0.
-            if metadata_rec.transmit_time.hour != 0:
-              metadata_rec.transmit_time = metadata_rec.transmit_time.replace(hour=0)
-            metadata_rec.transmit_channel = int(float(row['PRIMARY_CHANNEL']))
-            metadata_rec.export_time = ""
-            #The telemetry decoder does not create the CSV files at the time of decoding, there are
-            #a couple of windows it uses. Based on the transmit time, we need to assign the export_time.
-            #Currently we have one at 00:12:00 and 00:42:00
-            #If we want to override the assumptions, we can use the EXPORT_TIME in the file, otherwise
-            #the default behavior occurs.
-            if len(row['EXPORT_TIME']) == 0:
-              #if metadata_rec.transmit_time.time() < datetime.strptime('00:12:00', "%H:%M:%S").time() or\
-              #  metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
-              if metadata_rec.transmit_time.time() <= datetime.strptime('00:10:40', "%H:%M:%S").time() or\
-                metadata_rec.transmit_time.time() > datetime.strptime('00:40:40', "%H:%M:%S").time():
-                metadata_rec.export_time = datetime.strptime('00:12:00', "%H:%M:%S")
+        try:
+          if line_num > 0:
+            station_id = row['STATION_ID'].lower()
+            if station_id in self.stations_metadata_shelve.station_codes():
+              metadata_rec = self.stations_metadata_shelve[station_id]
+              #DWR 2016-06-10
+              date_part, time_part = row['REPORTING_TIME'].split(' ')
+              hour,minute,second = time_part.split(':')
+              metadata_rec.transmit_time = datetime(year=1900, month=1, day=1, hour=int(hour), minute=int(minute), second=int(second))
+              #metadata_rec.transmit_time = datetime.strptime(row['REPORTING_TIME'], '%H:%M:%S')
+              #Transmit times are only minute/second reference for each hour, so if we have
+              #any actual hour values, set them to 0.
+              if metadata_rec.transmit_time.hour != 0:
+                metadata_rec.transmit_time = metadata_rec.transmit_time.replace(hour=0)
+              metadata_rec.transmit_channel = int(float(row['PRIMARY_CHANNEL']))
+              metadata_rec.export_time = ""
+              #The telemetry decoder does not create the CSV files at the time of decoding, there are
+              #a couple of windows it uses. Based on the transmit time, we need to assign the export_time.
+              #Currently we have one at 00:12:00 and 00:42:00
+              #If we want to override the assumptions, we can use the EXPORT_TIME in the file, otherwise
+              #the default behavior occurs.
+              if row['EXPORT_TIME'] is None or len(row['EXPORT_TIME']) == 0:
+                #if metadata_rec.transmit_time.time() < datetime.strptime('00:12:00', "%H:%M:%S").time() or\
+                #  metadata_rec.transmit_time.time() > datetime.strptime('00:42:00', "%H:%M:%S").time():
+                if metadata_rec.transmit_time.time() <= datetime.strptime('00:10:40', "%H:%M:%S").time() or\
+                  metadata_rec.transmit_time.time() > datetime.strptime('00:40:40', "%H:%M:%S").time():
+                  metadata_rec.export_time = datetime.strptime('00:12:00', "%H:%M:%S")
+                else:
+                  metadata_rec.export_time = datetime.strptime('00:42:00', "%H:%M:%S")
               else:
-                metadata_rec.export_time = datetime.strptime('00:42:00', "%H:%M:%S")
+                metadata_rec.export_time = datetime.strptime(row['EXPORT_TIME'], "%H:%M:%S")
+
+              #Now save the updated rec back.
+              self.stations_metadata_shelve[station_id] = metadata_rec
             else:
-              metadata_rec.export_time = datetime.strptime(row['EXPORT_TIME'], "%H:%M:%S")
-
-            #Now save the updated rec back.
-            self.stations_metadata_shelve[station_id] = metadata_rec
-          else:
-            if self.logger:
-              self.logger.error("Station: %s not found in stations metadata." % (station_id))
-
+              if self.logger:
+                self.logger.error("Station: %s not found in stations metadata." % (station_id))
+        except Exception as e:
+          self.logger.exception(e)
         line_num += 1
 
       telemetry_metadata_file.close()
