@@ -199,7 +199,6 @@ class station_status(object):
         self.current_hour_count_missed += 1
 
       else:
-
         #We have a file, but no records in it.
         if len(current_telemetry_dates) == 0:
           self.current_hour_count_missed += 1
@@ -250,7 +249,8 @@ class station_status(object):
     #Did not fail the check, so reset count.
     if not check_fail:
       self.current_hour_count_missed = 0
-
+    else:
+      self.logger.error('Check failed, errors: %s' % (",".join(self.decode_current_status())))
     self.last_check_status_time = current_hour
 
     return check_fail
@@ -907,6 +907,8 @@ class stations_data(object):
         if self.load_non_goes_telemetry_setup(kwargs['non_goes_telemetry_setup_file']):
 
           #Mark the stations either Goes East or West.
+          # Moved E/W setting into the site info csv file.
+          """
           station_code_keys = self.stations_metadata_shelve.get_station_codes()
           for station_id in station_code_keys:
             metadata_rec = self.stations_metadata_shelve[station_id]
@@ -915,6 +917,7 @@ class stations_data(object):
             else:
               metadata_rec.goes_satellite = 'E'
             self.stations_metadata_shelve[station_id] = metadata_rec
+          """
 
           #Save the data.
           self.stations_metadata_shelve.save()
@@ -973,51 +976,12 @@ class stations_data(object):
     header_row = [
       "STATION_ID",
       "SATELLITE_ID",
+      "GOES_EAST_WEST",
       "PRIMARY_CHANNEL",
       "REPORTING_TIME",
       "EXPORT_TIME"]
 
     ret_val = False
-    """
-    header_row = [
-      "STATION_ID",
-      "ENABLED",
-      "UNIT_ID",
-      "SITE_COMMENT",
-      "INSTALLATION_DATE",
-      "AGENCY",
-      "COUNTRY",
-      "DISTRICT",
-      "CITY",
-      "STATE",
-      "COUNTY",
-      "BASIN",
-      "LATITUDE",
-      "LONGITUDE",
-      "ELEVATION",
-      "COEFFICIENT1",
-      "COEFFICIENT2",
-      "COEFFICIENT3",
-      "WEIGHTING_FACTOR",
-      "SATELLITE_ID",
-      "PRIMARY_CHANNEL",
-      "RANDOM_CHANNEL",
-      "REPORTING_TIME",
-      "REPORTING_INTERVAL",
-      "LAST_UPDATE",
-      "TZONE_CODE",
-      "GMT_OFFSET",
-      "SHEF_ID",
-      "ALTERNATE_CHAR_ID_1",
-      "ALTERNATE_CHAR_ID_2",
-      "GPSTRING1",
-      "GPSTRING2",
-      "GPNUMBER1",
-      "GPNUMBER2",
-      "SETUP_FILE_NAME",
-      "PICTURE_FILE_NAME"
-    ]
-    """
     try:
       if self.logger:
         self.logger.debug("Start reading telemetry info file: %s" % (file_name))
@@ -1045,6 +1009,7 @@ class stations_data(object):
               #any actual hour values, set them to 0.
               if metadata_rec.transmit_time.hour != 0:
                 metadata_rec.transmit_time = metadata_rec.transmit_time.replace(hour=0)
+              metadata_rec.goes_satellite = row['GOES_EAST_WEST'].strip()
               metadata_rec.transmit_channel = int(float(row['PRIMARY_CHANNEL']))
               metadata_rec.export_time = ""
               #The telemetry decoder does not create the CSV files at the time of decoding, there are
