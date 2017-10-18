@@ -633,7 +633,8 @@ class stations_data(object):
         transmit_time = station_metadata_rec.transmit_time.strftime("%H:%M:%S")
         export_time = station_metadata_rec.export_time.strftime("%H:%M:%S")
       if self.logger:
-        self.logger.debug("Station: %s Transmit Time: %s Export Time: %s" % (station_code, transmit_time, export_time))
+        self.logger.debug("Station: %s (%s) Transmit Time: %s Export Time: %s" %\
+                          (station_code, station_metadata_rec.goes_satellite, transmit_time, export_time))
 
       if station_metadata_rec.export_time is not None:
         #Determine which export time the test time falls between. When we find the
