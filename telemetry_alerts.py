@@ -808,7 +808,7 @@ class stations_data(object):
       #Only send the email if we have stations to report.
       try:
         #Only send an email on the specified interval or if all stations failed to report.
-        if (est_time.hour % kwargs['email_interval_hours']) == 0 and est_time.minute < 30\
+        if (est_time.hour % kwargs['email_interval_hours']) == 0 and est_time.minute < 15\
           or (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed):
           if self.logger:
             self.logger.debug("Emailing test results to: %s" % (kwargs['send_to']))
