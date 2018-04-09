@@ -154,6 +154,7 @@ def main():
     else:
       import traceback
       traceback.print_exc(e)
+  logger.debug("Closing log.")
   return
 
 if __name__ == '__main__':
