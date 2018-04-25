@@ -11,6 +11,7 @@ import optparse
 import csv
 from CDMO_Util_Classes import sample_stations_file
 from telemetry_alerts import shelve_stations_status
+import time
 
 class signal_data:
   def __init__(self, **kwargs):
@@ -94,6 +95,7 @@ def main():
       if logger:
         logger.exception(e)
     else:
+      shelf_start_load = time.time()
       signal_shelve = station_signal_data(True)
       signal_shelve.open(shelve_file=shelve_file, protocol=2)
       now_time = datetime.now()
@@ -110,14 +112,15 @@ def main():
               delete_list.append(date_rec)
           for delete_item in delete_list:
             del station_rec[delete_item]
-
+      logger.debug("Shelf load and clear finished in %f seconds." % (time.time()-shelf_start_load))
+      file_proc_time = time.time()
       with open(options.sig_file, 'r') as signal_strength_file:
         signal_strength_reader = csv.reader(signal_strength_file, delimiter=',', quotechar='"')
         samp_stations = sample_stations_file(use_logging=True)
         save_path = os.path.join(stations_file_dest, 'stations_metadata.csv')
         samp_stations.download_file(stations_url, save_path)
         samp_stations.open(save_path)
-
+        row_cnt = 0
         for row in signal_strength_reader:
           station_code = row[20]
           rec_date, rec_time = row[18].split('  ')
@@ -146,8 +149,9 @@ def main():
                                                                     data.signal_strength,
                                                                     data.message_length))
           signal_shelve.set_station_rec(data.station_code, data)
+          row_cnt += 1
         signal_shelve.save()
-
+      logger.debug("Signal file processed %d rows in %f seconds." % (row_cnt,time.time()-file_proc_time))
   except (IOError, Exception) as e:
     if logger is not None:
       logger.exception(e)
