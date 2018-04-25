@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 import logging.config
 import optparse
 import csv
+import shelve
+
 from CDMO_Util_Classes import sample_stations_file
 from telemetry_alerts import shelve_stations_status
 import time
@@ -38,6 +40,53 @@ class station_signal_data(shelve_stations_status):
   #def __init__(self, use_logging, **kwargs):
   #  shelve_stations_status.__init__(self, use_logging, **kwargs)
 
+  def open(self, **kwargs):
+    self.filename = kwargs['shelve_file']
+    flag = kwargs.get('flag', 'c')
+    self.protocol = kwargs.get('protocol', 2)
+    self.data_connection = shelve.open(self.filename, flag=flag, protocol=self.protocol)
+
+  def save(self, shrink=False):
+    if shrink:
+      self.logger.debug("Shrinking the signal file.")
+      file_dir, file_name = os.path.split(self.filename)
+      file_name, file_ext = os.path.splitext(file_name)
+      temp_new_file = os.path.join(file_dir, "%s_temp%s" % (file_name, file_ext))
+      self.logger.debug("Opening temp signal file: %s" % (temp_new_file))
+      temp_data_connection = shelve.open(temp_new_file, flag='n', protocol=self.protocol)
+
+      #To keep the file size from growing, we copy the records to a new temp shelf, then copy over
+      #existing file.
+      stations = self.get_station_codes()
+      for station_code in stations:
+        station_rec = self.get_station_rec(station_code)
+        try:
+          if len(station_rec):
+            temp_data_connection[station_code] = station_rec
+          else:
+            signal_rec = {}
+            temp_data_connection[station_code] = signal_rec
+        except Exception, e:
+          if self.logger:
+            self.logger.exception(e)
+
+      temp_data_connection.close()
+      self.data_connection.close()
+      try:
+        #Delete the orignal file.
+        self.logger.debug("Removing old signal file: %s" % (self.filename))
+        os.remove(self.filename)
+        #Rename the temp new file to the desired filename
+        self.logger.debug("Renaming signal file: %s to %s" % (temp_new_file, self.filename))
+        os.rename(temp_new_file, self.filename)
+      except Exception as e:
+        self.logger.exception(e)
+
+    else:
+      self.data_connection.close()
+
+    self.data_connection = shelve.open(self.filename, protocol=self.protocol)
+
   def set_station_rec(self, station_code, station_rec):
     try:
       signal_rec = self.data_connection[station_code]
@@ -56,13 +105,15 @@ class station_signal_data(shelve_stations_status):
       if self.logger:
         self.logger.exception(e)
 
-
   def get_station_rec(self, station_code):
     try:
       station_status_rec = self.data_connection[station_code]
       return station_status_rec
     except (KeyError, AttributeError) as e:
       raise e
+
+  def update_station_rec(self, station_code, station_rec):
+    self.data_connection[station_code] = station_rec
 
 
 def main():
@@ -99,10 +150,12 @@ def main():
       signal_shelve = station_signal_data(True)
       signal_shelve.open(shelve_file=shelve_file, protocol=2)
       now_time = datetime.now()
+      save_shelf_file = False
       if options.days_to_keep is not None:
         seconds_in_day = 3600 * 24
         stations = signal_shelve.get_station_codes()
         for station in stations:
+          update_station_rec = False
           station_rec = signal_shelve.get_station_rec(station)
           delete_list = []
           for date_rec in station_rec:
@@ -110,8 +163,16 @@ def main():
             time_delta = now_time - date_rec
             if int(time_delta.total_seconds() / seconds_in_day) > options.days_to_keep:
               delete_list.append(date_rec)
+          if len(delete_list):
+            update_station_rec = True
+            save_shelf_file = True
+            logger.debug("Station: %s has %d signal entries to delete." % (station, len(delete_list)))
           for delete_item in delete_list:
             del station_rec[delete_item]
+          if update_station_rec:
+            signal_shelve.update_station_rec(station, station_rec)
+      if save_shelf_file:
+        signal_shelve.save(shrink=True)
       logger.debug("Shelf load and clear finished in %f seconds." % (time.time()-shelf_start_load))
       file_proc_time = time.time()
       with open(options.sig_file, 'r') as signal_strength_file:
