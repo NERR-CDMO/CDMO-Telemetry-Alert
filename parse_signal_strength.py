@@ -214,6 +214,7 @@ def main():
           except Exception as e:
             logger.error("Row: %d %s contains an error" % (row_cnt, row))
             logger.exception(e)
+
           row_cnt += 1
         signal_shelve.save()
       logger.debug("Signal file processed %d rows in %f seconds." % (row_cnt,time.time()-file_proc_time))
