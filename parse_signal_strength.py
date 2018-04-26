@@ -183,33 +183,37 @@ def main():
         samp_stations.open(save_path)
         row_cnt = 0
         for row in signal_strength_reader:
-          station_code = row[20]
-          rec_date, rec_time = row[18].split('  ')
-          rec_date = rec_date.split('/')
-          rec_date = "%02d/%02d/%4d" % (int(rec_date[0]), int(rec_date[1]), int(rec_date[2]))
+          try:
+            station_code = row[20]
+            rec_date, rec_time = row[18].split('  ')
+            rec_date = rec_date.split('/')
+            rec_date = "%02d/%02d/%4d" % (int(rec_date[0]), int(rec_date[1]), int(rec_date[2]))
 
-          if rec_time.find('PM') != -1:
-            rec_time = rec_time.split('PM')[0]
-            ampm = 'PM'
-          else:
-            rec_time = rec_time.split('AM')[0]
-            ampm = 'AM'
+            if rec_time.find('PM') != -1:
+              rec_time = rec_time.split('PM')[0]
+              ampm = 'PM'
+            else:
+              rec_time = rec_time.split('AM')[0]
+              ampm = 'AM'
 
-          rec_time = rec_time.split(':')
-          rec_time = '%02d:%02d:%02d %s' % (int(rec_time[0]), int(rec_time[1]), int(rec_time[2]), ampm)
+            rec_time = rec_time.split(':')
+            rec_time = '%02d:%02d:%02d %s' % (int(rec_time[0]), int(rec_time[1]), int(rec_time[2]), ampm)
 
-          rec_date = '%s %s' % (rec_date, rec_time)
-          rec_date = datetime.strptime(rec_date, "%m/%d/%Y %I:%M:%S %p")
+            rec_date = '%s %s' % (rec_date, rec_time)
+            rec_date = datetime.strptime(rec_date, "%m/%d/%Y %I:%M:%S %p")
 
-          data = signal_data(station_code=station_code.upper(),
-                             record_datetime=rec_date,
-                             signal_strength=int(float(row[22])),
-                             message_length=int(float(row[27])))
-          logger.debug("Station: %s Date: %s SigStr: %d Len: %d" % (data.station_code,
-                                                                    data.record_datetime,
-                                                                    data.signal_strength,
-                                                                    data.message_length))
-          signal_shelve.set_station_rec(data.station_code, data)
+            data = signal_data(station_code=station_code.upper(),
+                               record_datetime=rec_date,
+                               signal_strength=int(float(row[22])),
+                               message_length=int(float(row[27])))
+            logger.debug("Station: %s Date: %s SigStr: %d Len: %d" % (data.station_code,
+                                                                      data.record_datetime,
+                                                                      data.signal_strength,
+                                                                      data.message_length))
+            signal_shelve.set_station_rec(data.station_code, data)
+          except Exception as e:
+            logger.error("Row: %d %s contains an error" % (row_cnt, row))
+            logger.exception(e)
           row_cnt += 1
         signal_shelve.save()
       logger.debug("Signal file processed %d rows in %f seconds." % (row_cnt,time.time()-file_proc_time))
