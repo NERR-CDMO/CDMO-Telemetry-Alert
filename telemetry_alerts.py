@@ -1,6 +1,6 @@
 import sys
-#sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
-sys.path.append("D:\scripts\common")
+#ys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
+sys.path.append("D:\scripts\commonfiles\python")
 
 from os.path import join
 
@@ -9,13 +9,15 @@ import optparse
 #import requests
 import csv
 import ConfigParser
-from datetime import datetime, time
+from datetime import datetime
+import time as basic_time
 from pytz import timezone
 
 import shelve
 from mako.template import Template
 from mako import exceptions as makoExceptions
-import simplejson
+import json
+#import simplejson
 
 from smtp_utils import smtpClass
 
@@ -471,7 +473,7 @@ class station_telemetry_statistic(shelve_stations_status):
     try:
       station_status_rec = self.data_connection[station_code]
       return station_status_rec
-    except (KeyError, AttributeError) as e:
+    except (KeyError, AttributeError, Exception) as e:
       raise e
 
 """
@@ -629,6 +631,7 @@ class stations_data(object):
       #If we have an export time, the station is telemetered. We need to determine
       #based on the time this check is running what stations should have created telemetry files.
       transmit_time = ""
+      export_time = ""
       if station_metadata_rec.transmit_time:
         transmit_time = station_metadata_rec.transmit_time.strftime("%H:%M:%S")
         export_time = station_metadata_rec.export_time.strftime("%H:%M:%S")
@@ -757,6 +760,7 @@ class stations_data(object):
 
   def output_results(self, **kwargs):
     if self.logger:
+      self.logger.debug(kwargs)
       self.logger.debug("Exporting test results to: %s" % (kwargs['report_out_filename']))
     report_out_file = None
     try:
@@ -810,16 +814,19 @@ class stations_data(object):
         #Only send an email on the specified interval or if all stations failed to report.
         if (est_time.hour % kwargs['email_interval_hours']) == 0 and est_time.minute < 15\
           or (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed):
+          send_email = True
           if self.logger:
-            self.logger.debug("Emailing test results to: %s" % (kwargs['send_to']))
+            self.logger.debug("Emailing test results to: %s Error List Len: %d" % (kwargs['send_to'],len(self.error_list)))
           if ('email_host' in kwargs) and\
-            (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed or len(self.error_list)):
+            (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed or len(self.error_list) or send_email):
             subject = "[CDMO] Telemetry Alerts"
+            self.logger.debug("Email Host: %s User: %s" % (kwargs['email_host'], kwargs['email_user']))
             if self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed:
               subject = "[CDMO ERROR] %s STATIONS FOR TIME SLOT FAILED TO REPORT" % (goes_hemisphere_fail)
 
-            email_obj = smtpClass(host=kwargs['email_host'], user=kwargs['email_user'], password=kwargs['email_password'])
-            email_obj.from_addr("%s@%s" % (kwargs['email_from_addr'], kwargs['email_host']))
+            email_obj = smtpClass(host=kwargs['email_host'], user=kwargs['email_user'], password=kwargs['email_password'], port=kwargs['email_smtp_port'], use_tls=kwargs['email_use_tls'])
+            #email_obj.from_addr("%s@%s" % (kwargs['email_from_addr'], kwargs['email_host']))
+            email_obj.from_addr(kwargs['email_from_addr'])
             email_obj.rcpt_to(kwargs['send_to'])
             email_obj.message(template_output)
             email_obj.subject(subject)
@@ -999,6 +1006,8 @@ class stations_data(object):
         try:
           if line_num > 0:
             station_id = row['STATION_ID'].lower()
+            if station_id == "marcwwq":
+              station_id
             if station_id in self.stations_metadata_shelve.station_codes():
               metadata_rec = self.stations_metadata_shelve[station_id]
               #DWR 2016-06-10
@@ -1013,6 +1022,7 @@ class stations_data(object):
               metadata_rec.goes_satellite = row['GOES_EAST_WEST'].strip()
               metadata_rec.transmit_channel = int(float(row['PRIMARY_CHANNEL']))
               metadata_rec.export_time = ""
+              metadata_rec.hads_id = row['SATELLITE_ID'].strip()
               #The telemetry decoder does not create the CSV files at the time of decoding, there are
               #a couple of windows it uses. Based on the transmit time, we need to assign the export_time.
               #Currently we have one at 00:12:00 and 00:42:00
@@ -1144,7 +1154,7 @@ class stations_data(object):
                                      'status': status_dict}
     try:
       with open(json_outfile, "w") as json_file:
-        json_file.write(simplejson.dumps(stations_data, sort_keys=True, indent=2 * ' '))
+        json_file.write(json.dumps(stations_data, sort_keys=True, indent=2 * ' '))
     except IOError,e:
       if self.logger:
         self.logger.exception(e)
@@ -1203,14 +1213,60 @@ class stations_data(object):
               self.logger.exception(e)
 
     return
+
+
+def cleanup_stats(**kwargs):
+  logger = logging.getLogger(__name__)
+  stats_shelf = kwargs['status_file']
+  file_path, file_name = os.path.split(stats_shelf)
+  file_name, file_ext = os.path.splitext(file_name)
+
+  stations_status_shelve = station_telemetry_statistic(True)
+  stations_status_shelve.open(shelve_file=stats_shelf, protocol=2)
+  current_shelf_file = None
+  for station_code in stations_status_shelve.get_station_codes():
+    station_code_start = basic_time.time()
+    logger.debug("Processing station: %s" % (station_code))
+    try:
+      station_rec = stations_status_shelve.get_station_rec(station_code)
+    except Exception as e:
+      logger.exception(e)
+    else:
+      date_keys = station_rec.keys()
+      date_keys.sort()
+      last_year = None
+      for date_key in date_keys:
+        year = date_key.year
+        if last_year is None or last_year != year:
+          logger.debug("Station: %s processing year: %d" % (station_code, year))
+          year_file = os.path.join(file_path, "%s-%d%s" % (file_name, year, file_ext))
+          last_year = year
+
+          if not os.path.exists(year_file) or current_shelf_file is None:
+            if current_shelf_file is not None:
+              current_shelf_file.close()
+            current_shelf_file = station_telemetry_statistic(True)
+            current_shelf_file.open(shelve_file=year_file, protocol=2)
+            last_year = year
+        try:
+          current_shelf_file.set_station_rec(station_code, station_rec[date_key])
+        except Exception as e:
+          logger.exception(e)
+
+    logger.debug("Station: %s finished processing in %f seconds" % (station_code, basic_time.time()-station_code_start))
+
+  if current_shelf_file is not None:
+    current_shelf_file.close()
 def main():
   parser = optparse.OptionParser()
   parser.add_option("-c", "--ConfigFile", dest="configFile",
                     help="Configuration file" )
   parser.add_option("-u", "--UpdateStationMetadata", dest="update_station_metadata", default=False, action="store_true",
-                    help="Configuration file" )
+                    help="" )
   parser.add_option("-s", "--CheckStatus", dest="check_status", default=False, action="store_true",
-                    help="Configuration file" )
+                    help="" )
+  parser.add_option("--EmailCheck", dest="check_email", default=False, action="store_true",
+                    help="Flga that specifies we just want to send a test email to verify email settings." )
   parser.add_option("-j", "--BuildJSON", dest="build_json_file", default=False, action="store_true",
                     help="Flag that specifies build the JSON output file." )
   parser.add_option("-f", "--SaveAllStatus", dest="save_all_status", default=False, action="store_true",
@@ -1219,6 +1275,9 @@ def main():
                     help="")
   parser.add_option("-d", "--StationTimeReport", dest="build_time_report", default=False, action="store_true",
                     help="Flag that specifies building the report that shows when station transmits and when data is available from CDMO site." )
+
+  parser.add_option("-t", "--CleanUpStatsFile", dest="cleanup_stats", default=False, action="store_true",
+                    help="Flag that specifies to clean up the stats file by breaking file up into year and compacting current file." )
 
   (options, args) = parser.parse_args()
 
@@ -1285,6 +1344,9 @@ def main():
         email_from_addr = configFile.get('email_settings', 'from_addr')
         send_to = configFile.get('email_settings', 'send_to').split(',')
         email_interval_hours = configFile.getint('email_settings', 'email_interval_hours')
+        use_tls = configFile.getboolean('email_settings', 'use_tls')
+        smtp_port = configFile.getint('email_settings', 'port')
+
         text_only_on_all_misses = configFile.getboolean('text_settings', 'text_only_on_all_misses')
         text_addresses = configFile.get('text_settings', 'text_addresses').split(',')
       except ConfigParser.NoOptionError,e:
@@ -1302,6 +1364,8 @@ def main():
                           email_user=email_user,
                           email_password=email_password,
                           email_from_addr=email_from_addr,
+                          email_use_tls=use_tls,
+                          email_smtp_port=smtp_port,
                           send_to=send_to,
                           email_interval_hours=email_interval_hours,
                           report_all_failures=True,
@@ -1319,6 +1383,29 @@ def main():
 
       #if options.save_all_status:
       #  data.save_status(save_all=True)
+
+    if options.cleanup_stats:
+      cleanup_stats(status_file=telemetry_stats_shelve_file)
+
+    if options.check_email:
+      email_host = configFile.get('email_settings', 'server')
+      email_user = configFile.get('email_settings', 'user_name')
+      email_password = configFile.get('email_settings', 'password')
+      email_from_addr = configFile.get('email_settings', 'from_addr')
+      send_to = configFile.get('email_settings', 'send_to').split(',')
+      use_tls = configFile.getboolean('email_settings', 'use_tls')
+      smtp_port = configFile.getint('email_settings', 'port')
+
+      try:
+        email_obj = smtpClass(host=email_host, user=email_user, password=email_password,
+                              port=smtp_port, use_tls=use_tls)
+        email_obj.from_addr(email_from_addr)
+        email_obj.rcpt_to(send_to)
+        email_obj.message('A simple test to check email settings.')
+        email_obj.subject('[CDMO] Telemetry Alerts Email Check')
+        email_obj.send(content_type="html")
+      except Exception as e:
+        logger.exception(e)
   if logger:
     logger.info("Log file closed.")
 

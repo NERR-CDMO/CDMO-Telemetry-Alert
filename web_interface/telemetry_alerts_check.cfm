@@ -6,9 +6,9 @@
     ArrayAppend(variables.arguments, "--CheckStatus");
 </cfscript>
 
-<cfexecute name="D:\\python27\\python.exe"
+<cfexecute name="D:\\Python27-64bit\\python.exe"
             arguments=#variables.arguments#
-            timeout="2"
+            timeout="30"
             variable="scripts_results">
 </cfexecute>
 
