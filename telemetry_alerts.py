@@ -1,6 +1,7 @@
+import os
 import sys
-#ys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
-sys.path.append("D:\scripts\commonfiles\python")
+sys.path.append("/Users/danramage/Documents/workspace/CDMO/python/common")
+#sys.path.append("D:\scripts\commonfiles\python")
 
 from os.path import join
 
@@ -8,7 +9,10 @@ import logging.config
 import optparse
 #import requests
 import csv
-import ConfigParser
+if sys.version_info[0] < 3:
+  import ConfigParser
+else:
+  import configparser as ConfigParser
 from datetime import datetime
 import time as basic_time
 from pytz import timezone
@@ -279,12 +283,12 @@ class station_status(object):
               try:
                 date_time_val = datetime.strptime(date_string, '%m/%d/%Y %H:%M')
                 dates_present.append(date_time_val)
-              except ValueError,e:
+              except ValueError as e:
                 if self.logger:
                   self.logger.exception(e)
 
           line_cnt += 1
-    except IOError,e:
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
 
@@ -443,17 +447,17 @@ class station_telemetry_statistic(shelve_stations_status):
   def set_station_rec(self, station_code, station_rec):
     try:
       telemetry_rec = self.data_connection[station_code]
-    except KeyError,e:
+    except KeyError as e:
       if self.logger:
         self.logger.exception(e)
       telemetry_rec = {}
       self.data_connection[station_code] = telemetry_rec
-    except EOFError, e:
+    except EOFError as e:
       if self.logger:
         self.logger.exception(e)
       telemetry_rec = {}
       self.data_connection[station_code] = telemetry_rec
-    except Exception, e:
+    except Exception as e:
       if self.logger:
         self.logger.exception(e)
       telemetry_rec = {}
@@ -464,7 +468,7 @@ class station_telemetry_statistic(shelve_stations_status):
       #telemetry_rec[station_rec.record_datetime.strftime('%Y-%m-%d %H:%M:%S')] = station_rec
       telemetry_rec[station_rec.record_datetime] = station_rec
       self.data_connection[station_code] = telemetry_rec
-    except Exception, e:
+    except Exception as e:
       if self.logger:
         self.logger.exception(e)
 
@@ -561,7 +565,7 @@ class stations_data(object):
       for station_code in self.stations_metadata_shelve.station_codes():
         try:
          self.stations_status_shelve[station_code]
-        except KeyError,e:
+        except KeyError as e:
           if self.logger:
             self.logger.debug("Station: %s status does not exist, adding." % (station_code))
           station_status_rec = station_status(True, station_code=station_code)
@@ -765,7 +769,7 @@ class stations_data(object):
     report_out_file = None
     try:
       report_out_file = open(kwargs['report_out_filename'], 'w')
-    except IOError,e:
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
     try:
@@ -840,7 +844,7 @@ class stations_data(object):
           email_obj.message("%s STATIONS MISSED, TELEMETRY MAY BE DOWN." % (goes_hemisphere_fail))
           email_obj.send()
 
-      except Exception, e:
+      except Exception as e:
         if self.logger:
           self.logger.exception(e)
 
@@ -944,7 +948,7 @@ class stations_data(object):
 
       telemetry_metadata_file = open(file_name, "rU")
       dict_file = csv.DictReader(telemetry_metadata_file, delimiter=',', quotechar='"', fieldnames=header_row)
-    except IOError,e:
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -996,7 +1000,7 @@ class stations_data(object):
 
       telemetry_metadata_file = open(file_name, "rU")
       dict_file = csv.DictReader(telemetry_metadata_file, delimiter=',', quotechar='"', fieldnames=header_row)
-    except IOError,e:
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -1083,7 +1087,7 @@ class stations_data(object):
 
       reserve_file = open(file_name, "r")
       dict_file = csv.DictReader(reserve_file, delimiter=',', quotechar='"', fieldnames=header_row)
-    except IOError,e:
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -1129,7 +1133,7 @@ class stations_data(object):
 
         ret_val = True
 
-      except Exception, e:
+      except Exception as e:
         if self.logger:
           self.logger.exception(e)
 
@@ -1142,7 +1146,11 @@ class stations_data(object):
     json_outfile = kwargs['json_out_file']
     stations_data = {}
     eastern = timezone('US/Eastern')
-    station_code_keys = self.stations_metadata_shelve.get_station_codes()
+    if sys.version_info[0] < 3:
+      station_code_keys = self.stations_metadata_shelve.get_station_codes()
+    else:
+      station_code_keys = list(self.stations_metadata_shelve.get_station_codes())
+
     station_code_keys.sort()
     for station_code in station_code_keys:
       #status_dict = self.stations[station_code]['status'].to_dict(eastern)
@@ -1154,8 +1162,8 @@ class stations_data(object):
                                      'status': status_dict}
     try:
       with open(json_outfile, "w") as json_file:
-        json_file.write(json.dumps(stations_data, sort_keys=True, indent=2 * ' '))
-    except IOError,e:
+        json_file.write(json.dumps(stations_data, sort_keys=True, indent=2))
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
 
@@ -1163,7 +1171,7 @@ class stations_data(object):
     report_out_file = None
     try:
       report_out_file = open(kwargs['report_out_filename'], 'w')
-    except IOError,e:
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -1257,6 +1265,51 @@ def cleanup_stats(**kwargs):
 
   if current_shelf_file is not None:
     current_shelf_file.close()
+
+
+def kill_process(pid):
+  import platform
+
+  if platform.system() == 'Linux':
+    import signal
+    os.kill(pid, signal.SIGKILL)
+  elif platform.system() == 'Windows':
+    import subprocess as s
+    s.Popen('taskkill /F /PID {0}'.format(pid), shell=True)
+  elif platform.system() == 'Darwin':
+    import signal
+    os.kill(pid, signal.SIGKILL)
+
+
+def check_running(lock_file_path):
+  logger = logging.getLogger()
+  if os.path.isfile(lock_file_path):
+    with open(lock_file_path, "r") as lock_file:
+      pid = lock_file.readline()
+      if len(pid):
+        pid = int(pid)
+      logger.error("Process is already running at PID: %d, terminating" % (pid))
+      try:
+        kill_process(pid)
+      except ProcessLookupError as e:
+        logger.error("Process already terminated.")
+        logger.exception(e)
+      except Exception as e:
+        logger.error("Unable to kill process PID; %d" % (pid))
+        logger.exception(e)
+      try:
+        logger.error("Removing lock file: %s" % (lock_file_path))
+        os.remove(lock_file_path)
+      except Exception as e:
+        logger.exception(e)
+  pid = os.getpid()
+  logger.debug("Creating lock file: %s" % (lock_file_path))
+  with open(lock_file_path, "w") as lock_file:
+    lock_file.write("%d\n" % (pid))
+
+
+  return
+
 def main():
   parser = optparse.OptionParser()
   parser.add_option("-c", "--ConfigFile", dest="configFile",
@@ -1279,7 +1332,11 @@ def main():
   parser.add_option("-t", "--CleanUpStatsFile", dest="cleanup_stats", default=False, action="store_true",
                     help="Flag that specifies to clean up the stats file by breaking file up into year and compacting current file." )
 
+  parser.add_option("-l", "--LockFile", dest="lock_file_path", default=None,
+                    help="Path to create a process ID file to check if the script is already running." )
+
   (options, args) = parser.parse_args()
+
 
   """
   options.configFile = "D:\\scripts\\telemetry_alerts\\telemetry_alerts.ini"
@@ -1296,6 +1353,9 @@ def main():
     logger = logging.getLogger("telemetry_alert_logging")
     logger.info("Log file opened.")
 
+  if options.lock_file_path is not None and options.check_status:
+    check_running(options.lock_file_path)
+
 
   try:
     status_shelve_file = configFile.get('settings', 'status_shelve_file')
@@ -1306,7 +1366,7 @@ def main():
     report_out_filename = configFile.get('template_settings', 'report_out_filename')
     json_out_file = configFile.get('json_settings', 'json_outfile')
 
-  except ConfigParser.NoOptionError,e:
+  except ConfigParser.NoOptionError as e:
     if logger:
       logger.exception(e)
   else:
@@ -1317,7 +1377,7 @@ def main():
         non_goes_telemetry_metadata_file = configFile.get('telemetry_settings', 'non_goes_data_file')
         local_stations_file = configFile.get('station_data_settings', 'sample_stations_file')
         west_station_list = configFile.get('telemetry_settings', 'west_stations').split(',')
-      except ConfigParser.NoOptionError,e:
+      except ConfigParser.NoOptionError as e:
         if logger:
           logger.exception(e)
       else:
@@ -1332,7 +1392,7 @@ def main():
             output_filename = configFile.get('station_time_report', 'report_file')
             data.output_station_data_time_report(report_out_filename=output_filename,
                                                  report_template=report_template)
-          except ConfigParser.NoOptionError,e:
+          except ConfigParser.NoOptionError as e:
             if logger:
               logger.exception(e)
 
@@ -1349,31 +1409,32 @@ def main():
 
         text_only_on_all_misses = configFile.getboolean('text_settings', 'text_only_on_all_misses')
         text_addresses = configFile.get('text_settings', 'text_addresses').split(',')
-      except ConfigParser.NoOptionError,e:
+      except ConfigParser.NoOptionError as e:
         if logger:
           logger.exception(e)
+      try:
+        data.initialize_data_sources(metadata_shelve_file=metadata_shelve_file,
+                                      status_shelve_file=status_shelve_file,
+                                      telemetry_stats_shelve_file=telemetry_stats_shelve_file)
+        data.check_status(telemetry_export_directory=export_file_directory)
 
-      data.initialize_data_sources(metadata_shelve_file=metadata_shelve_file,
-                                    status_shelve_file=status_shelve_file,
-                                    telemetry_stats_shelve_file=telemetry_stats_shelve_file)
-      data.check_status(telemetry_export_directory=export_file_directory)
+        data.output_results(report_template=report_template,
+                            report_out_filename=report_out_filename,
+                            email_host=email_host,
+                            email_user=email_user,
+                            email_password=email_password,
+                            email_from_addr=email_from_addr,
+                            email_use_tls=use_tls,
+                            email_smtp_port=smtp_port,
+                            send_to=send_to,
+                            email_interval_hours=email_interval_hours,
+                            report_all_failures=True,
+                            text_only_on_all_misses=text_only_on_all_misses,
+                            text_addresses=text_addresses)
 
-      data.output_results(report_template=report_template,
-                          report_out_filename=report_out_filename,
-                          email_host=email_host,
-                          email_user=email_user,
-                          email_password=email_password,
-                          email_from_addr=email_from_addr,
-                          email_use_tls=use_tls,
-                          email_smtp_port=smtp_port,
-                          send_to=send_to,
-                          email_interval_hours=email_interval_hours,
-                          report_all_failures=True,
-                          text_only_on_all_misses=text_only_on_all_misses,
-                          text_addresses=text_addresses)
-
-      data.write_json_data(json_out_file=json_out_file)
-
+        data.write_json_data(json_out_file=json_out_file)
+      except Exception as e:
+        logger.exception(e)
     if options.build_json_file or options.save_all_status:
       data.initialize_data_sources(metadata_shelve_file=metadata_shelve_file,
                                     status_shelve_file=status_shelve_file)
@@ -1408,7 +1469,12 @@ def main():
         logger.exception(e)
   if logger:
     logger.info("Log file closed.")
-
+  if options.lock_file_path is not None:
+    logger.debug("Removing lock file: %s" % (options.lock_file_path))
+    try:
+      os.remove(options.lock_file_path)
+    except Exception as e:
+      e
   return
 
 if __name__ == '__main__':
