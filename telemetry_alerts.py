@@ -558,6 +558,7 @@ class stations_data(object):
     True if successful, otherwise False.
   """
   def initialize_data_sources(self, **kwargs):
+    imported_station_status = kwargs.get("imported_station_status", None)
     #Load up the data from the shelve files.
     if 'metadata_shelve_file' in kwargs and 'status_shelve_file' in kwargs:
       self.stations_metadata_shelve.open(shelve_file=kwargs['metadata_shelve_file'], protocol=2)
@@ -570,6 +571,15 @@ class stations_data(object):
             self.logger.debug("Station: %s status does not exist, adding." % (station_code))
           station_status_rec = station_status(True, station_code=station_code)
           self.stations_status_shelve.set_station_rec(station_code, station_status_rec)
+        try:
+          if imported_station_status:
+           if imported_station_status[station_code]['status']['last_update_time'] and imported_station_status[station_code]['status']['current_hour_count_missed'] > 0:
+             self.logger.debug("Station: %s updating last update time: %s" % (station_code, imported_station_status[station_code]['status']['last_update_time']))
+             self.stations_status_shelve[station_code].last_update_time = imported_station_status[station_code]['status']['last_update_time']
+             self.stations_status_shelve[station_code].current_hour_count_missed = imported_station_status[station_code]['status']['current_hour_count_missed']
+             self.stations_status_shelve[station_code].record_updated = True
+        except Exception as e:
+          self.logger.exception(e)
       #Force save of all the records.
       self.stations_status_shelve.save()
 
@@ -823,10 +833,10 @@ class stations_data(object):
             self.logger.debug("Emailing test results to: %s Error List Len: %d" % (kwargs['send_to'],len(self.error_list)))
           if ('email_host' in kwargs) and\
             (self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed or len(self.error_list) or send_email):
-            subject = "[CDMO] Telemetry Alerts"
+            subject = "[CDMO New Server] Telemetry Alerts"
             self.logger.debug("Email Host: %s User: %s" % (kwargs['email_host'], kwargs['email_user']))
             if self.all_stations_failed or self.all_east_stations_failed or self.all_west_stations_failed:
-              subject = "[CDMO ERROR] %s STATIONS FOR TIME SLOT FAILED TO REPORT" % (goes_hemisphere_fail)
+              subject = "[CDMO ERROR New Server] %s STATIONS FOR TIME SLOT FAILED TO REPORT" % (goes_hemisphere_fail)
 
             email_obj = smtpClass(host=kwargs['email_host'], user=kwargs['email_user'], password=kwargs['email_password'], port=kwargs['email_smtp_port'], use_tls=kwargs['email_use_tls'])
             #email_obj.from_addr("%s@%s" % (kwargs['email_from_addr'], kwargs['email_host']))
@@ -840,7 +850,7 @@ class stations_data(object):
           if self.logger:
             self.logger.debug("All stations missed, sending texts to: %s" % (kwargs['text_addresses']))
           email_obj.rcpt_to(kwargs['text_addresses'])
-          email_obj.subject("[CDMO]%s STATIONS MISSED" % (goes_hemisphere_fail))
+          email_obj.subject("[CDMO New Server]%s STATIONS MISSED" % (goes_hemisphere_fail))
           email_obj.message("%s STATIONS MISSED, TELEMETRY MAY BE DOWN." % (goes_hemisphere_fail))
           email_obj.send()
 
@@ -1146,12 +1156,9 @@ class stations_data(object):
     json_outfile = kwargs['json_out_file']
     stations_data = {}
     eastern = timezone('US/Eastern')
-    if sys.version_info[0] < 3:
-      station_code_keys = self.stations_metadata_shelve.get_station_codes()
-    else:
-      station_code_keys = list(self.stations_metadata_shelve.get_station_codes())
-
-    station_code_keys.sort()
+    station_code_keys = self.stations_metadata_shelve.get_station_codes()
+    sorted(station_code_keys)
+    #station_code_keys.sort()
     for station_code in station_code_keys:
       #status_dict = self.stations[station_code]['status'].to_dict(eastern)
       status_rec = self.stations_status_shelve[station_code]
@@ -1335,6 +1342,9 @@ def main():
   parser.add_option("-l", "--LockFile", dest="lock_file_path", default=None,
                     help="Path to create a process ID file to check if the script is already running." )
 
+  parser.add_option("-i", "--ImportStationStatus", dest="import_station_status", default=None,
+                    help="Imports to a json file, the station status." )
+
   (options, args) = parser.parse_args()
 
 
@@ -1350,10 +1360,11 @@ def main():
   logFile = configFile.get('logging', 'configfile')
   if logFile:
     logging.config.fileConfig(logFile)
-    logger = logging.getLogger("telemetry_alert_logging")
+    logger = logging.getLogger()
     logger.info("Log file opened.")
 
-  if options.lock_file_path is not None and options.check_status:
+  logger.debug("Lock file: %s" % (options.lock_file_path))
+  if options.lock_file_path is not None:
     check_running(options.lock_file_path)
 
 
@@ -1413,9 +1424,15 @@ def main():
         if logger:
           logger.exception(e)
       try:
+        imported_station_status = None
+        if options.import_station_status:
+          with open(options.import_station_status, "r") as station_status_file:
+            imported_station_status = json.load(station_status_file)
+
         data.initialize_data_sources(metadata_shelve_file=metadata_shelve_file,
                                       status_shelve_file=status_shelve_file,
-                                      telemetry_stats_shelve_file=telemetry_stats_shelve_file)
+                                      telemetry_stats_shelve_file=telemetry_stats_shelve_file,
+                                      imported_station_status=imported_station_status)
         data.check_status(telemetry_export_directory=export_file_directory)
 
         data.output_results(report_template=report_template,
@@ -1435,6 +1452,21 @@ def main():
         data.write_json_data(json_out_file=json_out_file)
       except Exception as e:
         logger.exception(e)
+    if options.import_station_status:
+      try:
+        imported_station_status = None
+        if options.import_station_status:
+          with open(options.import_station_status, "r") as station_status_file:
+            imported_station_status = json.load(station_status_file)
+
+        data.initialize_data_sources(metadata_shelve_file=metadata_shelve_file,
+                                     status_shelve_file=status_shelve_file,
+                                     telemetry_stats_shelve_file=telemetry_stats_shelve_file,
+                                     imported_station_status=imported_station_status)
+      except ConfigParser.NoOptionError as e:
+        if logger:
+          logger.exception(e)
+
     if options.build_json_file or options.save_all_status:
       data.initialize_data_sources(metadata_shelve_file=metadata_shelve_file,
                                     status_shelve_file=status_shelve_file)
@@ -1467,14 +1499,13 @@ def main():
         email_obj.send(content_type="html")
       except Exception as e:
         logger.exception(e)
-  if logger:
-    logger.info("Log file closed.")
+
   if options.lock_file_path is not None:
     logger.debug("Removing lock file: %s" % (options.lock_file_path))
-    try:
-      os.remove(options.lock_file_path)
-    except Exception as e:
-      e
+    os.remove(options.lock_file_path)
+
+  if logger:
+    logger.info("Log file closed.")
   return
 
 if __name__ == '__main__':
